@@ -44,8 +44,7 @@ class LeftoverComments(RegexMatchableBaseModel):
         for match_ in re.finditer(
             leftover_comments_pattern, leftover_comments_response, re.DOTALL
         ):
-            leftover_comment = match_.group("leftover_comment").strip("\n")
-            if leftover_comment:
+            if leftover_comment := match_.group("leftover_comment").strip("\n"):
                 logger.info(f"leftover_comments: {leftover_comment}")
                 leftover_comments.append(leftover_comment)
         return cls(

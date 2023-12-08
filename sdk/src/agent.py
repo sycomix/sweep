@@ -36,11 +36,10 @@ class Message(BaseModel):
     key: str | None = None
 
     def to_openai(self) -> str:
-        obj = {
+        return {
             "role": self.role,
             "content": self.content,
         }
-        return obj
 
 
 OpenAIModel = (
@@ -101,7 +100,7 @@ class SweepChatGPT(BaseModel):
             tiktoken.encoding_for_model(model).encode(text, disallowed_special=())
         )
         messages_length = sum(
-            [count_tokens(message.content or "") for message in self.messages]
+            count_tokens(message.content or "") for message in self.messages
         )
         computed_max_tokens = (model_to_max_tokens[model] - int(messages_length)) - 50
         messages_dicts = [self.messages_dicts[0]]
@@ -178,10 +177,7 @@ class SweepAgent(SweepChatGPT, Generic[R]):
             )
         formatted_prompt = self.user_prompt.format(**user_prompt_args)
         chatgpt_response = self.chat(formatted_prompt)
-        serialized_response_object = self.regex_extract_model.from_string(
-            chatgpt_response
-        )
-        return serialized_response_object
+        return self.regex_extract_model.from_string(chatgpt_response)
 
     def handle_task_with_retries(
         self,

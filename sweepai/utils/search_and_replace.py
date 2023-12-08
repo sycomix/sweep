@@ -34,7 +34,7 @@ def match_without_whitespace(str1: str, str2: str) -> bool:
 
 
 def line_cost(line: str) -> float:
-    if line.strip() == "":
+    if not line.strip():
         return 50
     if line.strip().startswith("#") or line.strip().startswith("//"):
         return 50 + len(line) / (len(line) + 1) * 30
@@ -88,8 +88,8 @@ def score_multiline(query: list[str], target: list[str]) -> float:
                 )
                 new_scores = scores + [(score, weight)]
                 total_score = sum(
-                    [value * weight for value, weight in new_scores]
-                ) / sum([weight for _, weight in new_scores])
+                    value * weight for value, weight in new_scores
+                ) / sum(weight for _, weight in new_scores)
                 max_score = max(max_score, total_score)
             return max_score
         elif (
@@ -118,8 +118,10 @@ def score_multiline(query: list[str], target: list[str]) -> float:
         )
 
     final_score = (
-        sum([value * weight for value, weight in scores])
-        / sum([weight for _, weight in scores])
+        (
+            sum(value * weight for value, weight in scores)
+            / sum(weight for _, weight in scores)
+        )
         if scores
         else 0
     )
@@ -158,7 +160,7 @@ def find_best_match(query: str, code_file: str):
 
     code_file_lines = code_file.split("\n")
     query_lines = query.split("\n")
-    if len(query_lines) > 0 and query_lines[-1].strip() == "...":
+    if query_lines and query_lines[-1].strip() == "...":
         query_lines = query_lines[:-1]
     if len(query_lines) > 0 and query_lines[0].strip() == "...":
         query_lines = query_lines[1:]
@@ -178,7 +180,7 @@ def find_best_match(query: str, code_file: str):
     if truncate < 1:
         truncate = len(code_file_lines)
 
-    indent_array = [i for i in range(0, max(min(max_indents + 1, 20), 1))]
+    indent_array = list(range(0, max(min(max_indents + 1, 20), 1)))
     if max_indents > 3:
         indent_array = [3, 2, 4, 0, 1] + list(range(5, max_indents + 1))
     for num_indents in indent_array:

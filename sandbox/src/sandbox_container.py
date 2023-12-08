@@ -7,7 +7,7 @@ client = docker.from_env()
 
 class SandboxContainer:
     def __init__(self, image_id="sweepai/sandbox:latest"):
-        self.container_name = "sandbox-{}".format(str(uuid.uuid4()))
+        self.container_name = f"sandbox-{str(uuid.uuid4())}"
         self.image_id = image_id
 
     def __enter__(self):

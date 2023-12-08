@@ -30,14 +30,10 @@ diff_section_prompt = """
 def comparison_to_diff(comparison, blocked_dirs):
     pr_diffs = []
     for file in comparison.files:
-        diff = file.patch
-        if (
-            file.status == "added"
-            or file.status == "modified"
-            or file.status == "removed"
-        ):
+        if file.status in ["added", "modified", "removed"]:
             if any(file.filename.startswith(dir) for dir in blocked_dirs):
                 continue
+            diff = file.patch
             pr_diffs.append((file.filename, diff))
         else:
             logger.info(
@@ -97,7 +93,7 @@ def on_merge(request_dict: dict, chat_logger: ChatLogger):
         ).check_for_issues(rule=rule, diff=commits_diff)
         if changes_required:
             make_pr(
-                title="[Sweep Rules] " + issue_title,
+                title=f"[Sweep Rules] {issue_title}",
                 repo_description=repo.description,
                 summary=issue_description,
                 repo_full_name=request_dict["repository"]["full_name"],

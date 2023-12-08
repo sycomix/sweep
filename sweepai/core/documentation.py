@@ -31,20 +31,11 @@ def chunk_string(s):
     if len(sentences) <= 6:
         return [s]
 
-    chunks = []
-    i = 0
-
-    # Slide a window of 6 sentences, moving it by 4 sentences each time
-    while i < len(sentences):
-        chunks.append(" ".join(sentences[i : i + 6]))
-        i += 4
-    return chunks
+    return [" ".join(sentences[i : i + 6]) for i in range(0, len(sentences), 4)]
 
 
 def remove_non_alphanumeric(url):
-    # Keep only alphanumeric characters, and remove all others
-    cleaned = re.sub(r"[^a-zA-Z0-9]", "", url)
-    return cleaned
+    return re.sub(r"[^a-zA-Z0-9]", "", url)
 
 
 def write_documentation(doc_url):

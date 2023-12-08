@@ -30,11 +30,7 @@ def filter_file(directory, file, sweep_config: SweepConfig):
     if not os.path.isfile(file):
         return False
     with open(file, "rb") as f:
-        is_binary = False
-        for block in iter(lambda: f.read(1024), b""):
-            if b"\0" in block:
-                is_binary = True
-                break
+        is_binary = any(b"\0" in block for block in iter(lambda: f.read(1024), b""))
         if is_binary:
             return False
 
@@ -66,11 +62,7 @@ def repo_to_chunks(
     def is_dir_too_big(file_name):
         dir_name = os.path.dirname(file_name)
         only_file_name = file_name[: len(directory)]
-        if (
-            only_file_name == "node_modules"
-            or only_file_name == "venv"
-            or only_file_name == "patch"
-        ):
+        if only_file_name in ["node_modules", "venv", "patch"]:
             return True
         if dir_name not in dir_file_count:
             dir_file_count[dir_name] = len(os.listdir(dir_name))

@@ -13,7 +13,7 @@ from sweepai.utils.event_logger import posthog
 
 GITHUB_OAUTH_URL = "https://github.com/login/oauth/access_token"
 
-stub = modal.Stub(ENV + "-ext")
+stub = modal.Stub(f"{ENV}-ext")
 image = modal.Image.debian_slim().pip_install(
     "requests", "PyGithub", "loguru", "posthog"
 )
@@ -27,7 +27,7 @@ FUNCTION_SETTINGS = {
 
 
 @stub.function(**FUNCTION_SETTINGS)
-@modal.asgi_app(label=ENV + "-ext")
+@modal.asgi_app(label=f"{ENV}-ext")
 def _asgi_app():
     asgi_app = FastAPI()
 
@@ -57,11 +57,10 @@ def _asgi_app():
         response = requests.post(GITHUB_OAUTH_URL, params=params)
         if response.status > 400:
             return response.text
-        else:
-            # parse response
-            parsed = parse_qs(response.text)
-            parsed.get("access_token")[0]
-            return "Successfully authorized."
+        # parse response
+        parsed = parse_qs(response.text)
+        parsed.get("access_token")[0]
+        return "Successfully authorized."
 
     @asgi_app.post("/auth")
     def auth(config: Config):

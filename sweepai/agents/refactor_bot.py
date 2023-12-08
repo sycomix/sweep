@@ -43,8 +43,10 @@ def deserialize(text: str):
 
 
 def count_plus_minus_in_diff(description):
-    plus_count = sum([1 for line in description.split("\n") if line.startswith("+")])
-    minus_count = sum([1 for line in description.split("\n") if line.startswith("-")])
+    plus_count = sum(1 for line in description.split("\n") if line.startswith("+"))
+    minus_count = sum(
+        1 for line in description.split("\n") if line.startswith("-")
+    )
     return plus_count, minus_count
 
 
@@ -234,8 +236,8 @@ class RefactorBot(ChatGPT):
                     if best_match.score < 80:
                         updated_code = "\n".join(updated_code.split("\n")[:-1])
                         best_match = find_best_match(updated_code, recent_file_contents)
-                        if best_match.score < 80:
-                            continue
+                    if best_match.score < 80:
+                        continue
                 matched_lines = recent_file_contents.split("\n")[
                     best_match.start : best_match.end
                 ]

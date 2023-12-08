@@ -174,7 +174,7 @@ def new_modify(
             + f"# Instructions:\n{request}"
         )
         if not any(file_path.endswith(ext) for ext in allowed_exts):
-            os.rename(file_path, file_path + ".txt")
+            os.rename(file_path, f"{file_path}.txt")
             file_path += ".txt"
         target_file_object = openai_retry_with_timeout(
             client.files.create, file=Path(file_path), purpose="assistants"

@@ -20,8 +20,7 @@ def get_module_of_entity(
 ) -> str | None:
     my_index = index.SymbolIndex()
     my_index.build_index([project_name])
-    results = my_index.symbol_scores(entity_name)
-    if results:
+    if results := my_index.symbol_scores(entity_name):
         return results[0][1]
     return None
 
@@ -51,8 +50,7 @@ def add_auto_imports(
     try:
         undefined_names = get_undefined_names(code, file_path)
         for undefined_name in undefined_names:
-            module = get_module_of_entity(undefined_name, project_name)
-            if module:
+            if module := get_module_of_entity(undefined_name, project_name):
                 code = f"from {module} import {undefined_name}\n{code}"
         if run_isort:
             code = isort.code(code)

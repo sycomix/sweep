@@ -40,7 +40,7 @@ def get_sliding_windows(lines):
 
 
 def get_refactor_snippets(code, hashes_dict):
-    lines = [line for line in code.split("\n")]
+    lines = list(code.split("\n"))
     active_vars = get_active_variables_per_line(code)
     for window in get_sliding_windows(lines):
         if window.hash_ in hashes_dict:
@@ -69,12 +69,12 @@ def get_refactor_snippets(code, hashes_dict):
         if is_valid_window(code, window, start_and_end_indices):
             # not a duplicate, perform more rigorous checking
             if window_value < len(lines):
-                # basically an integration over the active variables
-                active_vars_delta = 0
                 start_vars = active_vars.get(window.start_line, 0)
-                for line in range(window.start_line, window.end_line):
-                    if line in active_vars:
-                        active_vars_delta += active_vars.get(line, 0) - start_vars
+                active_vars_delta = sum(
+                    active_vars.get(line, 0) - start_vars
+                    for line in range(window.start_line, window.end_line)
+                    if line in active_vars
+                )
                 if active_vars_delta >= 0:
                     non_dup_count += 1
                     completed_spans.extend(start_and_end_indices)
@@ -109,11 +109,9 @@ def is_valid_window(
         # get shortest common indent
         split_code = window.code.split("\n")
         shortest_common_indent = min(
-            [
-                len(line) - len(line.lstrip())
-                for line in split_code
-                if line.strip() != ""
-            ]
+            len(line) - len(line.lstrip())
+            for line in split_code
+            if line.strip() != ""
         )
         if shortest_common_indent == 0:
             # this handles the case when an envvar is defined, otherwise rope moves it out of scope
@@ -152,12 +150,14 @@ def is_valid_window(
         return False
 
     def invalid_entity_inside_node(window_nodes):
-        if any(
-            isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef))
-            for node in window_nodes
-        ):
-            return True
-        return False
+        return any(
+            (
+                isinstance(
+                    node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)
+                )
+                for node in window_nodes
+            )
+        )
 
     if invalid_entity_inside_node(window_nodes):
         return False
@@ -219,10 +219,7 @@ def active_variables(usage_spans):
             else:
                 active_vars[key] = {var}
 
-    # Convert sets to counts
-    active_vars_counts = {key: len(vars) for key, vars in active_vars.items()}
-
-    return active_vars_counts
+    return {key: len(vars) for key, vars in active_vars.items()}
 
 
 if __name__ == "__main__":

@@ -73,10 +73,9 @@ class IssueTitleAndDescription(RegexMatchableBaseModel):
             if changes_required_match
             else None
         )
-        if changes_required and "true" in changes_required.lower():
-            changes_required = True
-        else:
-            changes_required = False
+        changes_required = bool(
+            changes_required and "true" in changes_required.lower()
+        )
         issue_title_pattern = r"""<issue_title>(\n)?(?P<issue_title>.*)</issue_title>"""
         issue_title_match = re.search(issue_title_pattern, string, re.DOTALL)
         issue_title = (

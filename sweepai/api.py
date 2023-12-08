@@ -88,8 +88,7 @@ def run_on_button_click(*args, **kwargs):
 
 def run_on_check_suite(*args, **kwargs):
     request = kwargs["request"]
-    pr_change_request = on_check_suite(request)
-    if pr_change_request:
+    if pr_change_request := on_check_suite(request):
         call_on_comment(**pr_change_request.params, comment_type="github_action")
         logger.info("Done with on_check_suite")
     else:
@@ -127,10 +126,7 @@ def call_on_ticket(*args, **kwargs):
     global on_ticket_events
     key = f"{kwargs['repo_full_name']}-{kwargs['issue_number']}"  # Full name, issue number as key
 
-    # Use multithreading
-    # Check if a previous process exists for the same key, cancel it
-    e = on_ticket_events.get(key, None)
-    if e:
+    if e := on_ticket_events.get(key, None):
         logger.info(f"Found previous thread for key {key} and cancelling it")
         terminate_thread(e)
 

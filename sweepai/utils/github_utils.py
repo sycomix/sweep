@@ -47,11 +47,11 @@ def get_token(installation_id: int):
             jwt = get_jwt()
             headers = {
                 "Accept": "application/vnd.github+json",
-                "Authorization": "Bearer " + jwt,
+                "Authorization": f"Bearer {jwt}",
                 "X-GitHub-Api-Version": "2022-11-28",
             }
             response = requests.post(
-                f"https://api.github.com/app/installations/{int(installation_id)}/access_tokens",
+                f"https://api.github.com/app/installations/{installation_id}/access_tokens",
                 headers=headers,
             )
             obj = response.json()
@@ -79,7 +79,7 @@ def get_installation_id(username: str) -> str:
         f"https://api.github.com/users/{username}/installation",
         headers={
             "Accept": "application/vnd.github+json",
-            "Authorization": "Bearer " + jwt,
+            "Authorization": f"Bearer {jwt}",
             "X-GitHub-Api-Version": "2022-11-28",
         },
     )
@@ -209,10 +209,10 @@ class ClonedRepo:
             excluded_directories.append(".git")
 
         def list_directory_contents(
-            current_directory,
-            indentation="",
-            ctags: CTags = None,
-        ):
+                current_directory,
+                indentation="",
+                ctags: CTags = None,
+            ):
             """Recursively list the contents of directories."""
 
             file_and_folder_names = os.listdir(current_directory)
@@ -231,7 +231,7 @@ class ClonedRepo:
                 if os.path.isdir(complete_path):
                     directory_tree_string += f"{indentation}{relative_path}/\n"
                     directory_tree_string += list_directory_contents(
-                        complete_path, indentation + "  ", ctags=ctags
+                        complete_path, f"{indentation}  ", ctags=ctags
                     )
                 else:
                     directory_tree_string += f"{indentation}{name}\n"
@@ -281,7 +281,7 @@ class ClonedRepo:
             for directory in snippet_path.split("/")[
                 snippet_depth // 2 : -1
             ]:  # heuristic
-                file_list += directory + "/"
+                file_list += f"{directory}/"
                 prefixes.append(file_list.rstrip("/"))
             file_list += snippet_path.split("/")[-1]
             prefixes.append(snippet_path)
@@ -315,12 +315,11 @@ class ClonedRepo:
             if file_path.startswith("/")
             else f"{self.repo_dir}/{file_path}"
         )
-        if os.path.exists(local_path):
-            with open(local_path, "r", encoding="utf-8", errors="replace") as f:
-                contents = f.read()
-            return contents
-        else:
+        if not os.path.exists(local_path):
             raise FileNotFoundError(f"{local_path} does not exist.")
+        with open(local_path, "r", encoding="utf-8", errors="replace") as f:
+            contents = f.read()
+        return contents
 
     def get_num_files_from_repo(self):
         # subprocess.run(["git", "config", "--global", "http.postBuffer", "524288000"])
@@ -344,7 +343,7 @@ class ClonedRepo:
                 if time_limited and commit.authored_datetime.replace(
                     tzinfo=None
                 ) <= cut_off_date.replace(tzinfo=None):
-                    logger.info(f"Exceeded cut off date, stopping...")
+                    logger.info("Exceeded cut off date, stopping...")
                     break
                 repo = get_github_client(self.installation_id)[1].get_repo(
                     self.repo_full_name
@@ -397,7 +396,7 @@ def get_hunks(a: str, b: str, context=10):
         elif i - 1 in show:
             hunks.append("...")
 
-    if len(hunks) > 0 and hunks[0] == "...":
+    if hunks and hunks[0] == "...":
         hunks = hunks[1:]
     if len(hunks) > 0 and hunks[-1] == "...":
         hunks = hunks[:-1]

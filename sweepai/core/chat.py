@@ -85,19 +85,15 @@ class ChatGPT(BaseModel):
         **kwargs,
     ):
         content = system_message_prompt
-        repo = kwargs.get("repo")
-        if repo:
+        if repo := kwargs.get("repo"):
             repo_info = get_description(repo)
-            repo_description = repo_info["description"]
             repo_info["rules"]
-            if repo_description:
+            if repo_description := repo_info["description"]:
                 content += f"{repo_description_prefix_prompt}\n{repo_description}"
         messages = [Message(role="system", content=content, key="system")]
 
         added_messages = human_message.construct_prompt()  # [ { role, content }, ... ]
-        for msg in added_messages:
-            messages.append(Message(**msg))
-
+        messages.extend(Message(**msg) for msg in added_messages)
         return cls(
             messages=messages,
             human_message=human_message,
@@ -205,20 +201,18 @@ class ChatGPT(BaseModel):
 
         count_tokens = Tiktoken().count
         messages_length = sum(
-            [count_tokens(message.content or "") for message in self.messages]
+            count_tokens(message.content or "") for message in self.messages
         )
         max_tokens = (
             model_to_max_tokens[model] - int(messages_length) - 400
         )  # this is for the function tokens
-        logger.info("file_change_paths" + str(self.file_change_paths))
+        logger.info(f"file_change_paths{str(self.file_change_paths)}")
         messages_raw = "\n".join([(message.content or "") for message in self.messages])
         logger.info(f"Input to call openai:\n{messages_raw}")
         if len(self.file_change_paths) > 0:
             self.file_change_paths.remove(self.file_change_paths[0])
         if max_tokens < 0:
-            if len(self.file_change_paths) > 0:
-                pass
-            else:
+            if len(self.file_change_paths) <= 0:
                 raise ValueError(f"Message is too long, max tokens is {max_tokens}")
 
         messages_dicts = [self.messages_dicts[0]]
@@ -343,19 +337,17 @@ class ChatGPT(BaseModel):
 
         count_tokens = Tiktoken().count
         messages_length = sum(
-            [count_tokens(message.content or "") for message in self.messages]
+            count_tokens(message.content or "") for message in self.messages
         )
         max_tokens = (
             model_to_max_tokens[model] - int(messages_length) - 400
         )  # this is for the function tokens
         # TODO: Add a check to see if the message is too long
-        logger.info("file_change_paths" + str(self.file_change_paths))
+        logger.info(f"file_change_paths{str(self.file_change_paths)}")
         if len(self.file_change_paths) > 0:
             self.file_change_paths.remove(self.file_change_paths[0])
         if max_tokens < 0:
-            if len(self.file_change_paths) > 0:
-                pass
-            else:
+            if len(self.file_change_paths) <= 0:
                 logger.error(
                     f"Input to OpenAI:\n{self.messages_dicts}\n{traceback.format_exc()}"
                 )
@@ -448,9 +440,7 @@ class ChatGPT(BaseModel):
 
     @property
     def messages_dicts(self):
-        # Remove the key from the message object before sending to OpenAI
-        cleaned_messages = [message.to_openai() for message in self.messages]
-        return cleaned_messages
+        return [message.to_openai() for message in self.messages]
 
     def undo(self):
         if len(self.prev_message_states) > 0:

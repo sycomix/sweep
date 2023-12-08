@@ -34,7 +34,9 @@ num_full_files = 2
 ordinal = lambda n: str(n) + (
     "th" if 4 <= n <= 20 else {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
 )
-format_sandbox_success = lambda success: "✓" if success else f"❌ (`Sandbox Failed`)"
+format_sandbox_success = (
+    lambda success: "✓" if success else "❌ (`Sandbox Failed`)"
+)
 
 
 def create_collapsible(summary: str, body: str, opened: bool = False):

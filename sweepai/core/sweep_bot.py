@@ -101,10 +101,14 @@ def remove_line_numbers(s: str) -> str:
 
 
 def is_blocked(file_path: str, blocked_dirs: list[str]):
-    for blocked_dir in blocked_dirs:
-        if file_path.startswith(blocked_dir) and len(blocked_dir) > 0:
-            return {"success": True, "path": blocked_dir}
-    return {"success": False}
+    return next(
+        (
+            {"success": True, "path": blocked_dir}
+            for blocked_dir in blocked_dirs
+            if file_path.startswith(blocked_dir) and len(blocked_dir) > 0
+        ),
+        {"success": False},
+    )
 
 
 class CodeGenBot(ChatGPT):
@@ -201,12 +205,12 @@ class CodeGenBot(ChatGPT):
                 files_to_change_response = self.chat(
                     subissues_prompt, message_key="subissues"
                 )  # Dedup files to change here
-                subissues = []
-                for re_match in re.finditer(
-                    ProposedIssue._regex, files_to_change_response, re.DOTALL
-                ):
-                    subissues.append(ProposedIssue.from_string(re_match.group(0)))
-                if subissues:
+                if subissues := [
+                    ProposedIssue.from_string(re_match.group(0))
+                    for re_match in re.finditer(
+                        ProposedIssue._regex, files_to_change_response, re.DOTALL
+                    )
+                ]:
                     return subissues
             except RegexMatchError:
                 logger.warning("Failed to parse! Retrying...")
@@ -234,81 +238,6 @@ class CodeGenBot(ChatGPT):
         file_change_requests: list[FileChangeRequest] = []
         try:
             python_issue_worked = True
-            if False:  # is_python_issue:
-                if any(
-                    keyword in self.human_message.title.lower()
-                    for keyword in ("refactor", "extract", "replace", "test")
-                ):
-                    if self.chat_logger is not None:
-                        posthog.capture(
-                            self.chat_logger.data.get("username"),
-                            "python_refactor",
-                        )
-                    # regenerate issue metadata
-                    self.update_message_content_from_message_key(
-                        "metadata", self.human_message.get_issue_metadata()
-                    )
-                    self.ticket_progress: TicketProgress = self.ticket_progress
-                    self.ticket_progress.planning_progress.assistant_conversation.messages = (
-                        []
-                    )
-                    for message in self.messages:
-                        self.ticket_progress.planning_progress.assistant_conversation.messages.append(
-                            AssistantAPIMessage(
-                                content=message.content,
-                                role=message.role,
-                            )
-                        )
-                    self.ticket_progress.planning_progress.assistant_conversation.messages.append(
-                        AssistantAPIMessage(
-                            content=extract_files_to_change_prompt,
-                            role="user",
-                        )
-                    )
-                    extract_response = self.chat(
-                        extract_files_to_change_prompt, message_key="extract_prompt"
-                    )
-                    self.ticket_progress.planning_progress.assistant_conversation.messages.append(
-                        AssistantAPIMessage(content=extract_response, role="assistant")
-                    )
-                    extraction_request = ExtractionRequest.from_string(extract_response)
-                    file_change_requests = []
-                    plan_str = ""
-                    if extraction_request.use_tools:
-                        for re_match in re.finditer(
-                            FileChangeRequest._regex, extract_response, re.DOTALL
-                        ):
-                            file_change_request = FileChangeRequest.from_string(
-                                re_match.group(0)
-                            )
-                            file_change_requests.append(file_change_request)
-                            if file_change_request.change_type != "refactor":
-                                new_file_change_request = copy.deepcopy(
-                                    file_change_request
-                                )
-                                new_file_change_request.instructions = ""
-                                new_file_change_request.parent = file_change_request
-                                new_file_change_request.id_ = str(uuid.uuid4())
-                                file_change_requests.append(new_file_change_request)
-                            elif file_change_request.change_type == "refactor":
-                                new_file_change_request = copy.deepcopy(
-                                    file_change_request
-                                )
-                                new_file_change_request.change_type = "modify"
-                                new_file_change_request.parent = file_change_request
-                                new_file_change_request.instructions = "Add detailed, sphinx-style docstrings to all of the new functions."
-                                new_file_change_request.id_ = str(uuid.uuid4())
-                                file_change_requests.append(new_file_change_request)
-                            if file_change_requests:
-                                plan_str = "\n".join(
-                                    [
-                                        fcr.instructions_display
-                                        for fcr in file_change_requests
-                                    ]
-                                )
-                        return file_change_requests, plan_str
-                    else:
-                        self.delete_messages_from_chat("extract_prompt")
             if pr_diffs is not None:
                 self.delete_messages_from_chat("pr_diffs")
                 self.messages.insert(
@@ -320,13 +249,13 @@ class CodeGenBot(ChatGPT):
                 self.ticket_progress.planning_progress.assistant_conversation.messages = (
                     []
                 )
-                for message in self.messages:
-                    self.ticket_progress.planning_progress.assistant_conversation.messages.append(
-                        AssistantAPIMessage(
-                            content=message.content,
-                            role=message.role,
-                        )
+                self.ticket_progress.planning_progress.assistant_conversation.messages.extend(
+                    AssistantAPIMessage(
+                        content=message.content,
+                        role=message.role,
                     )
+                    for message in self.messages
+                )
                 self.ticket_progress.planning_progress.assistant_conversation.messages.append(
                     AssistantAPIMessage(
                         content=files_to_change_prompt,
@@ -493,10 +422,8 @@ class GithubBot(BaseModel):
                         return f"{branch}_{i}"
                     except GithubException:
                         pass
-            else:
-                new_branch = self.repo.get_branch(branch)
-                if new_branch:
-                    return new_branch.name
+            elif new_branch := self.repo.get_branch(branch):
+                return new_branch.name
             raise e
 
     def populate_snippets(self, snippets: list[Snippet]):
@@ -532,9 +459,7 @@ class GithubBot(BaseModel):
                         self.repo.name,
                     ]:
                         try:
-                            new_filename = file_change_request.filename.replace(
-                                prefix + "/", "", 1
-                            )
+                            new_filename = file_change_request.filename.replace(f"{prefix}/", "", 1)
                             contents = self.repo.get_contents(
                                 new_filename,
                                 branch or SweepConfig.get_branch(self.repo),
@@ -555,7 +480,8 @@ class GithubBot(BaseModel):
                 ) and file_change_request.change_type == "create":
                     file_change_request.change_type = "modify"
                 elif (
-                    not (contents or file_change_request.filename in created_files)
+                    not contents
+                    and file_change_request.filename not in created_files
                     and file_change_request.change_type == "modify"
                 ):
                     file_change_request.change_type = "create"
@@ -578,9 +504,7 @@ class GithubBot(BaseModel):
             except Exception as e:
                 logger.info(traceback.format_exc())
                 raise e
-        file_change_requests = [
-            file_change_request for file_change_request in file_change_requests
-        ]
+        file_change_requests = list(file_change_requests)
         return file_change_requests
 
 
@@ -670,7 +594,7 @@ class SweepBot(CodeGenBot, GithubBot):
                     )
                     self.repo.update_file(
                         file_path,
-                        "Update " + file_path,
+                        f"Update {file_path}",
                         content,
                         fetched_content.sha,
                         branch=ASSET_BRANCH_NAME,
@@ -678,7 +602,7 @@ class SweepBot(CodeGenBot, GithubBot):
                 except UnknownObjectException:
                     self.repo.create_file(
                         file_path,
-                        "Add " + file_path,
+                        f"Add {file_path}",
                         content,
                         branch=ASSET_BRANCH_NAME,
                     )
@@ -687,7 +611,6 @@ class SweepBot(CodeGenBot, GithubBot):
             return ""
 
     @staticmethod
-    # @file_cache(ignore_params=["token"])
     def run_sandbox(
         repo_url: str,
         file_path: str,
@@ -717,8 +640,7 @@ class SweepBot(CodeGenBot, GithubBot):
             timeout=(5, 500),
         )
         response.raise_for_status()
-        output = response.json()
-        return output
+        return response.json()
 
     def check_completion(self, file_name: str, new_content: str) -> bool:
         return True
@@ -858,10 +780,9 @@ class SweepBot(CodeGenBot, GithubBot):
                 changed_files=changed_files,
             )
             file_change.code = file_contents
-        commit_message_match = re.search(
+        if commit_message_match := re.search(
             'Commit message: "(?P<commit_message>.*)"', create_file_response
-        )
-        if commit_message_match:
+        ):
             file_change.commit_message = commit_message_match.group("commit_message")
         else:
             file_change.commit_message = f"Create {file_change_request.filename}"
@@ -1058,7 +979,7 @@ class SweepBot(CodeGenBot, GithubBot):
             tb = traceback.format_exc()
             logger.warning(f"Failed to parse." f" {e}\n{tb}")
             self.delete_messages_from_chat(key)
-        raise Exception(f"Failed to parse response after 1 attempt.")
+        raise Exception("Failed to parse response after 1 attempt.")
 
     def get_files_to_change_from_sandbox(
         self,

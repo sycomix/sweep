@@ -21,8 +21,7 @@ def parse_html(html):
 
     for property_name in meta_properties:
         try:
-            tag = soup.find("meta", property=property_name)
-            if tag:
+            if tag := soup.find("meta", property=property_name):
                 meta[property_name] = str(tag.get("content", None))
         except AttributeError:
             meta[property_name] = None
@@ -32,11 +31,10 @@ def parse_html(html):
 
     title = soup.title.string if soup.title else ""
     content = soup.body.get_text() if soup.body else ""
-    links = []
-
-    for a in soup.find_all("a", href=True):
-        links.append({"title": a.text.strip(), "link": a["href"]})
-
+    links = [
+        {"title": a.text.strip(), "link": a["href"]}
+        for a in soup.find_all("a", href=True)
+    ]
     content = re.sub(r"[\n\r\t]+", "\n", content)
     content = re.sub(r" +", " ", content)
     content = re.sub(r"[\n ]{3,}", "\n\n", content)
@@ -55,8 +53,7 @@ def download_html(url: str) -> str:
 
 def extract_info(url):
     html = download_html(url)
-    data = parse_html(html)
-    return data
+    return parse_html(html)
 
 
 def extract_links(text):

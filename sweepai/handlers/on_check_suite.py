@@ -151,7 +151,7 @@ def on_check_suite(request: CheckRunCompleted):
         return None
     logs, user_message = clean_logs(logs)
     comment = pr.as_issue().create_comment(user_message)
-    pr_change_request = PRChangeRequest(
+    return PRChangeRequest(
         params={
             "type": "github_action",
             "repo_full_name": request.repository.full_name,
@@ -165,4 +165,3 @@ def on_check_suite(request: CheckRunCompleted):
             "comment_id": comment.id,
         },
     )
-    return pr_change_request

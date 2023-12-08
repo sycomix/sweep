@@ -33,9 +33,10 @@ def handle_button_click(request_dict):
     if check_button_title_match(
         REVERT_CHANGED_FILES_TITLE, request.comment.body, request.changes
     ):
-        revert_files = []
-        for button_text in selected_buttons:
-            revert_files.append(button_text.split(f"{RESET_FILE} ")[-1].strip())
+        revert_files = [
+            button_text.split(f"{RESET_FILE} ")[-1].strip()
+            for button_text in selected_buttons
+        ]
         handle_revert(revert_files, request_dict["issue"]["number"], repo)
         comment.edit(
             body=ButtonList(
@@ -49,9 +50,10 @@ def handle_button_click(request_dict):
         )
 
     if check_button_title_match(RULES_TITLE, request.comment.body, request.changes):
-        rules = []
-        for button_text in selected_buttons:
-            rules.append(button_text.split(f"{RULES_LABEL} ")[-1].strip())
+        rules = [
+            button_text.split(f"{RULES_LABEL} ")[-1].strip()
+            for button_text in selected_buttons
+        ]
         handle_rules(request_dict, rules, user_token, repo, gh_client)
         comment.edit(
             body=ButtonList(
@@ -127,7 +129,7 @@ def handle_rules(request_dict, rules, user_token, repo: Repository, gh_client):
         ).check_for_issues(rule=rule, diff=commits_diff)
         if changes_required:
             new_pr = make_pr(
-                title="[Sweep Rules] " + issue_title,
+                title=f"[Sweep Rules] {issue_title}",
                 repo_description=repo.description,
                 summary=f"Apply this change: {rule}\n{issue_description}",
                 repo_full_name=request_dict["repository"]["full_name"],

@@ -59,16 +59,14 @@ def make_pr(
     snippets = repo_context_manager.current_top_snippets
     tree = str(repo_context_manager.dir_obj)
     message_summary = summary
-    external_results = ExternalSearcher.extract_summaries(message_summary)
-    if external_results:
+    if external_results := ExternalSearcher.extract_summaries(message_summary):
         message_summary += "\n\n" + external_results
     user_dict = get_documentation_dict(cloned_repo.repo)
     docs_results = ""
     try:
-        docs_results = extract_relevant_docs(
+        if docs_results := extract_relevant_docs(
             title + "\n" + message_summary, user_dict, chat_logger
-        )
-        if docs_results:
+        ):
             message_summary += "\n\n" + docs_results
     except SystemExit:
         raise SystemExit
@@ -138,7 +136,7 @@ def make_pr(
             changed_files.append(file_change_request.filename)
         sandbox_response: SandboxResponse | None = sandbox_response
         format_sandbox_success = (
-            lambda success: "✓" if success else f"❌ (`Sandbox Failed`)"
+            lambda success: "✓" if success else "❌ (`Sandbox Failed`)"
         )
     pr_changes = response["pull_request"]
     pr_actions_message = (
@@ -161,9 +159,10 @@ def make_pr(
         base=branch_name if branch_name else SweepConfig.get_branch(repo),
     )
     pr.add_to_assignees(username)
-    buttons = []
-    for changed_file in changed_files:
-        buttons.append(Button(label=f"{RESET_FILE} {changed_file}"))
+    buttons = [
+        Button(label=f"{RESET_FILE} {changed_file}")
+        for changed_file in changed_files
+    ]
     revert_buttons_list = ButtonList(buttons=buttons, title=REVERT_CHANGED_FILES_TITLE)
     pr.create_issue_comment(revert_buttons_list.serialize())
     pr.add_to_labels(GITHUB_LABEL_NAME)
@@ -172,9 +171,7 @@ def make_pr(
         [
             checkbox_template.format(
                 check="X",
-                filename=file_change_request.display_summary
-                + " "
-                + file_change_request.status_display,
+                filename=f"{file_change_request.display_summary} {file_change_request.status_display}",
                 instructions=blockquote(
                     file_change_request.instructions_ticket_display
                 ),

@@ -78,7 +78,7 @@ if not GITHUB_BOT_USERNAME:
     elif ENV == "staging":
         GITHUB_BOT_USERNAME = "sweep-canary[bot]"
 elif not GITHUB_BOT_USERNAME.endswith("[bot]"):
-    GITHUB_BOT_USERNAME = GITHUB_BOT_USERNAME + "[bot]"
+    GITHUB_BOT_USERNAME = f"{GITHUB_BOT_USERNAME}[bot]"
 
 GITHUB_LABEL_NAME = os.environ.get("GITHUB_LABEL_NAME", "sweep")
 GITHUB_LABEL_COLOR = os.environ.get("GITHUB_LABEL_COLOR", "9400D3")
@@ -229,8 +229,7 @@ if isinstance(MULTI_REGION_CONFIG, str):
     MULTI_REGION_CONFIG = MULTI_REGION_CONFIG.strip("'").replace("\\n", "\n")
     MULTI_REGION_CONFIG = [item.split(",") for item in MULTI_REGION_CONFIG.split("\n")]
 
-WHITELISTED_USERS = os.environ.get("WHITELISTED_USERS", None)
-if WHITELISTED_USERS:
+if WHITELISTED_USERS := os.environ.get("WHITELISTED_USERS", None):
     WHITELISTED_USERS = WHITELISTED_USERS.split(",")
     WHITELISTED_USERS.append(GITHUB_BOT_USERNAME)
 

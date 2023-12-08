@@ -6,16 +6,14 @@ from sweepai.core.entities import Snippet
 
 def compute_score(relative_file_path, git_repo):
     commits = list(git_repo.iter_commits(paths=relative_file_path))
-    score_factor = get_factors(commits)
-    return score_factor
+    return get_factors(commits)
 
 
 def get_factors(commits):
     commit_count = len(commits) + 1
     earliest_commit = commits[0].committed_datetime if commits else datetime.now()
     current_time = datetime.now()
-    tz_info = earliest_commit.astimezone().tzinfo
-    if tz_info:
+    if tz_info := earliest_commit.astimezone().tzinfo:
         current_time = datetime.now().astimezone(tz_info)
         earliest_commit = earliest_commit.astimezone(tz_info)
     days_since_last_modified = (
@@ -34,11 +32,7 @@ def convert_to_percentiles(values, max_percentile=0.25):
     percentile_mapping = {
         value: (i / (n)) * max_percentile for i, value in enumerate(sorted_values)
     }
-    percentiles = [
-        percentile_mapping[value] for value in values
-    ]  # Create the percentiles list based on the mapping
-
-    return percentiles
+    return [percentile_mapping[value] for value in values]
 
 
 def get_scores(score_factors):

@@ -95,11 +95,9 @@ class ChatLogger(BaseModel):
         )
 
         ticket_count = self.get_ticket_count()
-        should_decrement = (self.is_paying_user() and ticket_count >= 500) or (
+        if should_decrement := (self.is_paying_user() and ticket_count >= 500) or (
             self.is_consumer_tier() and ticket_count >= 20
-        )
-
-        if should_decrement:
+        ):
             self.ticket_collection.update_one(
                 {"username": username}, {"$inc": {"purchased_tickets": -1}}, upsert=True
             )
@@ -174,11 +172,10 @@ class ChatLogger(BaseModel):
                 loc = Nominatim(user_agent="location_checker").geocode(
                     loc_user, exactly_one=True
                 )
-                g = False
-                for c in SUPPORT_COUNTRY:
-                    if c.lower() in loc.raw.get("display_name").lower():
-                        g = True
-                        break
+                g = any(
+                    c.lower() in loc.raw.get("display_name").lower()
+                    for c in SUPPORT_COUNTRY
+                )
                 if not g:
                     return (
                         self.get_ticket_count() >= 5

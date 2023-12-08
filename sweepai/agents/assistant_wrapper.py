@@ -182,15 +182,10 @@ def run_until_complete(
                 logger.info(f"Run completed with {run.status}")
                 raise Exception("Run failed")
             elif run.status == "requires_action":
-                tool_calls = [
-                    tool_call
-                    for tool_call in run.required_action.submit_tool_outputs.tool_calls
-                ]
+                tool_calls = list(run.required_action.submit_tool_outputs.tool_calls)
                 if any(
-                    [
-                        tool_call.function.name == raise_error_schema["name"]
-                        for tool_call in tool_calls
-                    ]
+                    tool_call.function.name == raise_error_schema["name"]
+                    for tool_call in tool_calls
                 ):
                     arguments_parsed = json.loads(tool_calls[0].function.arguments)
                     raise AssistantRaisedException(arguments_parsed["message"])
@@ -240,12 +235,12 @@ def run_until_complete(
             if message_strings != current_message_strings and current_message_strings:
                 logger.info(run.status)
                 logger.info(current_message_strings[0])
-                message_strings = current_message_strings
                 json_messages = get_json_messages(
                     thread_id=thread_id,
                     run_id=run_id,
                     assistant_id=assistant_id,
                 )
+                message_strings = current_message_strings
                 if chat_logger is not None:
                     chat_logger.add_chat(
                         {
@@ -258,9 +253,8 @@ def run_until_complete(
                             "temperature": 0,
                         }
                     )
-            else:
-                if i % 5 == 0:
-                    logger.info(run.status)
+            elif i % 5 == 0:
+                logger.info(run.status)
             time.sleep(sleep_time)
     except (KeyboardInterrupt, SystemExit):
         client.beta.threads.runs.cancel(thread_id=thread_id, run_id=run_id)
@@ -292,7 +286,7 @@ def openai_assistant_call_helper(
     if not file_ids:
         for file_path in file_paths:
             if not any(file_path.endswith(extension) for extension in allowed_exts):
-                os.rename(file_path, file_path + ".txt")
+                os.rename(file_path, f"{file_path}.txt")
                 file_path += ".txt"
             file_object = client.files.create(
                 file=Path(file_path), purpose="assistants"

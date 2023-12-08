@@ -24,10 +24,7 @@ def track_status(delay=5, failed_requests=6):
         time.sleep(delay)
         try:
             response = requests.get(DISCORD_STATUS_WEBHOOK_URL)
-            if response.status_code != 200:
-                healthy = False
-            else:
-                healthy = True
+            healthy = response.status_code == 200
         except requests.exceptions.ConnectionError:
             healthy = False
 
@@ -35,13 +32,10 @@ def track_status(delay=5, failed_requests=6):
 
         if not healthy:
             counter += 1
-            if counter > failed_requests:
-                counter = failed_requests
+            counter = min(counter, failed_requests)
         else:
             counter -= 1
-            if counter < 0:
-                counter = 0
-
+            counter = max(counter, 0)
         prev_down = down
         if counter == failed_requests:
             down = True

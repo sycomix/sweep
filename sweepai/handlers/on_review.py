@@ -19,12 +19,8 @@ def get_pr_diffs(repo, pr):
 
     pr_diffs = []
     for file in file_diffs:
-        diff = file.patch
-        if (
-            file.status == "added"
-            or file.status == "modified"
-            or file.status == "removed"
-        ):
+        if file.status in ["added", "modified", "removed"]:
+            diff = file.patch
             pr_diffs.append((file.filename, diff))
         else:
             logger.info(
@@ -74,7 +70,7 @@ def review_pr(
         else ChatLogger(
             {
                 "repo_name": repo_name,
-                "title": "(Review) " + title,
+                "title": f"(Review) {title}",
                 "summary": summary + replies_text,
                 "issue_url": issue_url,
                 "username": username,

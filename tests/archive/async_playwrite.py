@@ -26,17 +26,14 @@ def parse_html(html):
         "og:url",
     ]
 
-    meta = {}
-    links = []
-
-    for a in soup.find_all("a", href=True):
-        links.append({"title": a.text.strip(), "link": a["href"]})
-    meta["links"] = links
-
+    links = [
+        {"title": a.text.strip(), "link": a["href"]}
+        for a in soup.find_all("a", href=True)
+    ]
+    meta = {"links": links}
     for property_name in meta_properties:
         try:
-            tag = soup.find("meta", property=property_name)
-            if tag:
+            if tag := soup.find("meta", property=property_name):
                 meta[property_name] = str(tag.get("content", None))
         except AttributeError:
             meta[property_name] = None
@@ -103,7 +100,7 @@ async def scrape_page(page, url):
     if not path or path[path.rfind("/") :] == "/":
         path += "/index"
     # path = "langchain_docs" + path + ".md"
-    path = f"scraped_docs/{docs_name}" + path + ".md"
+    path = f"scraped_docs/{docs_name}{path}.md"
     os.makedirs(os.path.dirname(path), exist_ok=True)
     all_files[path] = content
     with open(path, "w") as f:

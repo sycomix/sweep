@@ -142,7 +142,7 @@ def create_pr_changes(
             pr_description = f"{pull_request.content}"
         pr_title = pull_request.title
         if "sweep.yaml" in pr_title:
-            pr_title = "[config] " + pr_title
+            pr_title = f"[config] {pr_title}"
     except MaxTokensExceeded as e:
         logger.error(e)
         posthog.capture(
@@ -182,7 +182,7 @@ def create_pr_changes(
 
     posthog.capture(username, "success", properties={**metadata})
     logger.info("create_pr success")
-    result = {
+    yield {
         "success": True,
         "pull_request": MockPR(
             file_count=completed_count,
@@ -195,7 +195,6 @@ def create_pr_changes(
             head=sweep_bot.repo.get_branch(pull_request.branch_name).commit,
         ),
     }
-    yield result  # Doing this because sometiems using StopIteration doesn't work, kinda jank tho tbh
     return
 
 
@@ -209,7 +208,7 @@ def safe_delete_sweep_branch(
     2. Prefixed by sweep/
     """
     pr_commits = pr.get_commits()
-    pr_commit_authors = set([commit.author.login for commit in pr_commits])
+    pr_commit_authors = {commit.author.login for commit in pr_commits}
 
     # Check if only Sweep has edited the PR, and sweep/ prefix
     if (
@@ -420,14 +419,12 @@ def create_gha_pr(g, repo):
         branch=branch_name,
     )
 
-    # Create a PR from this branch to the main branch
-    pr = repo.create_pull(
+    return repo.create_pull(
         title="Enable GitHub Actions",
         body="This PR enables GitHub Actions for this repository.",
         head=branch_name,
         base=repo.default_branch,
     )
-    return pr
 
 
 SWEEP_TEMPLATE = """\

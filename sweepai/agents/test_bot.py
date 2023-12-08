@@ -249,7 +249,7 @@ def skip_last_test(
         "(?=\n\s+@patch|def )", decomposed_code.definitions
     )
     serialized_message = message.replace('"', '\\"')
-    skipped_test = f'    @unittest.skip("{serialized_message}")\n    ' + last_test
+    skipped_test = f'    @unittest.skip("{serialized_message}")\n    {last_test}'
     new_code = "\n\n".join([*code_before, skipped_test])
 
     return "\n\n".join(
@@ -268,9 +268,7 @@ def pascal_case(s: str) -> str:
 
 def determine_pip_or_poetry(repo_base: str):
     """Determine whether a repo uses pip or poetry."""
-    if (Path(repo_base) / "pyproject.toml").exists():
-        return "poetry"
-    return "pip"
+    return "poetry" if (Path(repo_base) / "pyproject.toml").exists() else "pip"
 
 
 # This class should handle appending or creating new tests
@@ -297,9 +295,9 @@ class TestBot(ChatGPT):
         ),
         **kwargs,
     ):
-        test_file_path = file_path.replace(".py", "_test.py")
         # check if this exists
         existing_test_file = None
+        test_file_path = file_path.replace(".py", "_test.py")
         if cloned_repo and test_file_path in cloned_repo.get_file_list():
             existing_test_file = cloned_repo.get_file_contents(test_file_path)
         self.model = (
@@ -372,10 +370,7 @@ class TestBot(ChatGPT):
                 )
                 parent_class_definition = None
                 if parent_class_reference is not None:
-                    function_and_reference.function_code = (
-                        f"class {parent_scope.name}({parent_class_reference.name}):\n    ...\n\n"
-                        + function_and_reference.function_code
-                    )
+                    function_and_reference.function_code = f"class {parent_scope.name}({parent_class_reference.name}):\n    ...\n\n{function_and_reference.function_code}"
                     parent_class_definition = script.goto(
                         parent_class_reference.line, parent_class_reference.column
                     )[0]
@@ -394,10 +389,7 @@ class TestBot(ChatGPT):
                     )
                     summarized_parent_class = f'<parent_class entity="{parent_class_definition.module_name}:{start}-{end}">\n{parent_imports}\n\n...\n\n{summarize_code(parent_class_code)}\n</parent_class>\n\n'
                 else:
-                    function_and_reference.function_code = (
-                        f"class {parent_scope.name}:\n    ...\n\n"
-                        + function_and_reference.function_code
-                    )
+                    function_and_reference.function_code = f"class {parent_scope.name}:\n    ...\n\n{function_and_reference.function_code}"
             imports = remove_constants_from_imports(split_script(file_contents).imports)
             function_and_reference.function_code = (
                 imports + "\n\n" + function_and_reference.function_code
@@ -530,14 +522,14 @@ class TestBot(ChatGPT):
                         new_extension_tests,
                         changed_files,
                     )
-                    if (
-                        sandbox_response.error_messages
-                        and sandbox_response.success == False
-                    ):
-                        reason = sandbox_response.error_messages[-1].splitlines()[-1]
-                        new_extension_tests = skip_last_test(
-                            new_extension_tests, reason
-                        )
+                if (
+                    sandbox_response.error_messages
+                    and sandbox_response.success == False
+                ):
+                    reason = sandbox_response.error_messages[-1].splitlines()[-1]
+                    new_extension_tests = skip_last_test(
+                        new_extension_tests, reason
+                    )
 
                 decomposed_extension_script = split_script(extension_test_results)
                 _prefix, *tests = re.split(

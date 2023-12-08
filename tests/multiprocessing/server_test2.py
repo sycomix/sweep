@@ -17,7 +17,7 @@ if __name__ == "__main__":
     task_key = "example_task"
 
     # Start a task
-    for i in range(10):
+    for _ in range(10):
         print(start_task(task_key))
 
     # Sleep for a while to let the task run

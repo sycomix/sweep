@@ -105,7 +105,8 @@ tools = [
 @staticmethod
 def can_add_snippet(snippet: Snippet, current_snippets: list[Snippet]):
     return (
-        len(snippet.xml) + sum([len(snippet.xml) for snippet in current_snippets])
+        len(snippet.xml)
+        + sum(len(snippet.xml) for snippet in current_snippets)
         <= ASSISTANT_MAX_CHARS
     )
 
@@ -156,33 +157,31 @@ class RepoContextManager:
         snippets_in_repo_str = "\n".join(top_snippets_str)
         paths_in_repo_str = "\n".join(paths_in_repo)
         repo_tree = str(self.dir_obj)
-        user_prompt = unformatted_user_prompt.format(
+        return unformatted_user_prompt.format(
             query=query,
             snippets_in_repo=snippets_in_repo_str,
             paths_in_repo=paths_in_repo_str,
             repo_tree=repo_tree,
         )
-        return user_prompt
 
     def get_highest_scoring_snippet(self, file_path: str) -> Snippet:
         snippet_key = (
             lambda snippet: f"{snippet.file_path}:{snippet.start}:{snippet.end}"
         )
-        filtered_snippets = [
+        if filtered_snippets := [
             snippet
             for snippet in self.snippets
             if snippet.file_path == file_path
             and snippet not in self.current_top_snippets
-        ]
-        if not filtered_snippets:
+        ]:
+            return max(
+                filtered_snippets,
+                key=lambda snippet: self.snippet_scores[snippet_key(snippet)]
+                if snippet_key(snippet) in self.snippet_scores
+                else 0,
+            )
+        else:
             return None
-        highest_scoring_snippet = max(
-            filtered_snippets,
-            key=lambda snippet: self.snippet_scores[snippet_key(snippet)]
-            if snippet_key(snippet) in self.snippet_scores
-            else 0,
-        )
-        return highest_scoring_snippet
 
     def add_file_paths(self, paths_to_add: list[str]):
         self.dir_obj.add_file_paths(paths_to_add)
@@ -305,7 +304,7 @@ def modify_context(
                 ticket_progress.search_progress.final_snippets = (
                     repo_context_manager.current_top_snippets
                 )
-                logger.info("iteration: " + str(iter))
+                logger.info(f"iteration: {str(iter)}")
                 ticket_progress.save()
         if run.status == "completed":
             break
@@ -341,7 +340,20 @@ def modify_context(
             )
             valid_path = False
             output = ""
-            if tool_call.function.name == "store_file_path":
+            if tool_call.function.name == "expand_directory":
+                valid_path = repo_context_manager.is_path_valid(
+                    function_path_or_dir, directory=True
+                )
+                repo_context_manager.expand_all_directories([function_path_or_dir])
+                dir_string = str(repo_context_manager.dir_obj)
+                output = (
+                    f"SUCCESS: New repo_tree\n{dir_string}"
+                    if valid_path
+                    else "FAILURE: Invalid directory path. Please try a new path."
+                )
+                if valid_path:
+                    directories_to_expand.append(function_path_or_dir)
+            elif tool_call.function.name == "store_file_path":
                 if function_path_or_dir in repo_context_manager.top_snippet_paths:
                     valid_path = (
                         function_path_or_dir in repo_context_manager.top_snippet_paths
@@ -369,19 +381,6 @@ def modify_context(
                         if valid_path
                         else "FAILURE: This file path does not exist. Please try a new path."
                     )
-            elif tool_call.function.name == "expand_directory":
-                valid_path = repo_context_manager.is_path_valid(
-                    function_path_or_dir, directory=True
-                )
-                repo_context_manager.expand_all_directories([function_path_or_dir])
-                dir_string = str(repo_context_manager.dir_obj)
-                output = (
-                    f"SUCCESS: New repo_tree\n{dir_string}"
-                    if valid_path
-                    else "FAILURE: Invalid directory path. Please try a new path."
-                )
-                if valid_path:
-                    directories_to_expand.append(function_path_or_dir)
             tool_outputs.append(
                 {
                     "tool_call_id": tool_call.id,

@@ -31,7 +31,7 @@ def apply_patch(s, patch, revert=False):
                 line = p[i]
                 i += 1
             if len(line) > 0:
-                if line[0] == sign or line[0] == " ":
+                if line[0] in [sign, " "]:
                     t += line[1:]
                 sl += line[0] != sign
     t += "".join(s[sl:])

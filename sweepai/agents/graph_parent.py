@@ -84,10 +84,11 @@ class RelevantSymbolsAndFiles(RegexMatchableBaseModel):
                 symbol, file_path = split
                 symbols = strip_markdown(symbol)
                 file_paths = strip_markdown(file_path)
-                for file_path in file_paths:
-                    # check if file_path is a valid python file
-                    if file_path.endswith(".py") and " " not in file_path:
-                        relevant_files_to_symbols.append((file_path, symbols))
+                relevant_files_to_symbols.extend(
+                    (file_path, symbols)
+                    for file_path in file_paths
+                    if file_path.endswith(".py") and " " not in file_path
+                )
             for line in symbols_to_files_string.split("\n"):
                 if not line:
                     continue

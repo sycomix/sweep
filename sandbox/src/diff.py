@@ -8,8 +8,6 @@ def diff_contains_dups_or_removals(diff, new_code):
     added_line_pattern = r"^\+.*"
 
     lines_removed = False
-    duplicate_lines_added = False
-
     # Split the diff and new_code into separate lines
     diff_lines = diff.split("\n")[3:]  # Start from the third line
     new_code_lines = [line.strip() for line in new_code.split("\n")]
@@ -23,11 +21,9 @@ def diff_contains_dups_or_removals(diff, new_code):
     added_lines = [
         line[1:].strip() for line in diff_lines if re.match(added_line_pattern, line)
     ]
-    for line in added_lines:
-        if new_code_lines.count(line) > 1:
-            duplicate_lines_added = True
-            break
-
+    duplicate_lines_added = any(
+        new_code_lines.count(line) > 1 for line in added_lines
+    )
     return lines_removed or duplicate_lines_added
 
 
@@ -41,9 +37,7 @@ def generate_diff(old_code, new_code):
         old_code.splitlines(keepends=True), new_code.splitlines(keepends=True)
     )
 
-    diff_text = "".join(diff)
-
-    return diff_text
+    return "".join(diff)
 
 
 def revert_whitespace_changes(original_file_str, modified_file_str):
@@ -54,17 +48,18 @@ def revert_whitespace_changes(original_file_str, modified_file_str):
 
     final_lines = []
     for opcode in diff.get_opcodes():
-        if opcode[0] == "equal" or opcode[0] == "replace":
+        if opcode[0] in ["equal", "replace"]:
             # If the lines are equal or replace (means the change is not whitespace only)
             # use original lines.
             final_lines.extend(original_lines[opcode[1] : opcode[2]])
         elif opcode[0] == "insert":
             # If the lines are inserted in the modified file, check if it's just whitespace changes
             # If it's just whitespace changes, ignore them.
-            for line in modified_lines[opcode[3] : opcode[4]]:
-                if line.strip() != "":
-                    final_lines.append(line)
-
+            final_lines.extend(
+                line
+                for line in modified_lines[opcode[3] : opcode[4]]
+                if line.strip() != ""
+            )
     return "\n".join(final_lines)
 
 
@@ -144,8 +139,8 @@ def generate_new_file(
 
         # check if line was incorrectly duplicated
         append = True
-        if not copied_lines:  # if bot generated, and line before is not bot generated
-            if len(result) > 0:
+        if not copied_lines:
+            if result:
                 # Get last line in results
                 last_group = result[-1]
                 # last_line = last_group
@@ -159,9 +154,7 @@ def generate_new_file(
 
         if append:
             result.append(line)
-    result = "\n".join(result)
-
-    return result
+    return "\n".join(result)
 
 
 NOT_FOUND = "NOT_FOUND"
@@ -226,7 +219,7 @@ def get_snippet_with_padding(original, index, search):
         # Todo(lukejagg): This might need to be more robust.
 
         # Check multiple lines for their whitespace
-        min_whitespace = min([len(s) - len(s.lstrip()) for s in search])
+        min_whitespace = min(len(s) - len(s.lstrip()) for s in search)
         spaces = " " * min_whitespace
         strip = True
 
@@ -294,30 +287,20 @@ def sliding_window_replacement(
 ):
     status, replace_index = None, None
     # First, do check for "..." (example: define method, then put ... to ignore initial lines)
-    canDoDotCheck = not any(
-        "..." in line.strip() for line in original
-    )  # If ... not in original file
+    canDoDotCheck = all("..." not in line.strip() for line in original)
     if canDoDotCheck:
-        # Check first 3 lines for '...'
-        first_line_idx = -1
-        for i in range(len(search)):
-            if search[i].strip() == "...":
-                first_line_idx = i
-                break
-
-        # Do this for replace too
-        first_line_idx_replace = -1
-        for i in range(len(replace)):
-            if replace[i].strip() == "...":
-                first_line_idx_replace = i
-                break
-
+        first_line_idx = next(
+            (i for i in range(len(search)) if search[i].strip() == "..."), -1
+        )
+        first_line_idx_replace = next(
+            (i for i in range(len(replace)) if replace[i].strip() == "..."), -1
+        )
         # if no ...'s, then use radix_replace
         if (
             first_line_idx == -1
             and first_line_idx_replace == -1
             and search_context_before is None
-            and len(kwargs) == 0
+            and not kwargs
         ):
             try:
                 radix_original = radix_replace(original, search, replace)
@@ -441,7 +424,7 @@ def sliding_window_replacement(
     snippet, spaces, strip = get_snippet_with_padding(original, index, search)
     if strip:
         # Todo: What if whitespace in search is incorrect
-        first_line_spaces = min([len(s) - len(s.lstrip()) for s in search])
+        first_line_spaces = min(len(s) - len(s.lstrip()) for s in search)
         modified = [
             spaces + (lstrip_max(line, [" "], first_line_spaces) if strip else line)
             for line in replace
@@ -458,15 +441,15 @@ def get_all_diffs(modify_file_response: str) -> str:
     matches = re.findall(
         r"(<<<<.*?\n(.*?)\n====[^\n=]*\n(.*?)\n?>>>>)", modify_file_response, re.DOTALL
     )
-    result = "\n\n".join([_match for _match, *_ in matches])
-    return result
+    return "\n\n".join([_match for _match, *_ in matches])
 
 
 def get_matches(modify_file_response):
-    matches = re.findall(
-        r"<<<<.*?\n(.*?)\n====[^\n=]*\n(.*?)\n?>>>>", modify_file_response, re.DOTALL
+    return re.findall(
+        r"<<<<.*?\n(.*?)\n====[^\n=]*\n(.*?)\n?>>>>",
+        modify_file_response,
+        re.DOTALL,
     )
-    return matches
 
 
 def generate_new_file_from_patch(

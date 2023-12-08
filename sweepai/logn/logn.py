@@ -64,8 +64,7 @@ def print2(message, level="INFO"):
     # module_name = inspect.getmodule(calling_frame).__name__
     module_name = calling_frame.filename.split("/")[-1].replace(".py", "")
 
-    log_string = f"{timestamp} | {level:<8} | {module_name}:{function_name}:{line_number} - {message}"
-    return log_string
+    return f"{timestamp} | {level:<8} | {module_name}:{function_name}:{line_number} - {message}"
 
 
 logging_parsers = {
@@ -200,7 +199,7 @@ class _Task:
         name = self.metadata["name"]
 
         # Write logging file
-        log_path = os.path.join(LOG_PATH, name + ".txt")
+        log_path = os.path.join(LOG_PATH, f"{name}.txt")
         if self.create_file:
             log_path = _find_available_path(os.path.join(LOG_PATH, name))
             os.makedirs(os.path.dirname(log_path), exist_ok=True)
@@ -208,7 +207,7 @@ class _Task:
                 pass
 
         # Write metadata file
-        meta_path = os.path.join(META_PATH, name + ".json")
+        meta_path = os.path.join(META_PATH, f"{name}.json")
         if self.create_file:
             meta_path = _find_available_path(
                 os.path.join(META_PATH, name), extension=".json"
@@ -394,13 +393,13 @@ class _LogN(_Logger):
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Exit will close the logger after leaving the with statement."""
         # Check if it errored
-        if exc_type is not None:
-            if type(exc_type) == SystemExit:
-                self.close(state="Exited", exception=type(exc_type).__name__)
-            else:
-                self.close(state="Errored", exception=type(exc_type).__name__)
-        else:
+        if exc_type is None:
             self.close()
+
+        elif type(exc_type) == SystemExit:
+            self.close(state="Exited", exception=type(exc_type).__name__)
+        else:
+            self.close(state="Errored", exception=type(exc_type).__name__)
 
 
 class LogN:

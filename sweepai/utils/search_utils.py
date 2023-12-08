@@ -52,9 +52,11 @@ def search_snippets(
         if query_file_name in file_list:  # take the exact match
             query_match_files.append(query_file_name)
         else:  # otherwise take the files that contain the query
-            for file_name in file_list:
-                if query_file_name in file_name:
-                    query_match_files.append(file_name)
+            query_match_files.extend(
+                file_name
+                for file_name in file_list
+                if query_file_name in file_name
+            )
     # boost the rank of any files that are mentioned in the query, move them to the top positions
     boosted_snippets = []
     non_boosted_snippets = []
@@ -94,10 +96,7 @@ def search_snippets(
         snippet_paths=snippet_paths, excluded_directories=excluded_directories
     )
     snippets = [snippet.expand() for snippet in snippets]
-    if include_tree:
-        return snippets, tree, dir_obj
-    else:
-        return snippets
+    return (snippets, tree, dir_obj) if include_tree else snippets
 
 
 def index_full_repository(

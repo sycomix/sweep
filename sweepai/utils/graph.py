@@ -29,7 +29,7 @@ def extract_degree_paths(graph, start_node, degree=3):
                 dfs(neighbor, visited, path + [neighbor])
                 visited.remove(neighbor)
 
-    visited = set([start_node])
+    visited = {start_node}
     dfs(start_node, visited, [start_node])
     return paths
 
@@ -60,9 +60,8 @@ def extract_entities(code: str):
         code = codecs.decode(code.encode(), "utf-8-sig")
         tree = ast.parse(code)
         for node in ast.walk(tree):
-            if isinstance(node, ast.Import) or isinstance(node, ast.ImportFrom):
-                for n in node.names:
-                    imported_modules.append(n.name)
+            if isinstance(node, (ast.Import, ast.ImportFrom)):
+                imported_modules.extend(n.name for n in node.names)
             elif isinstance(node, ast.ClassDef):
                 defined_classes.append(node.name)
             elif isinstance(node, ast.FunctionDef):
@@ -143,7 +142,7 @@ def traverse_folder(folder):  # TODO(add excluded_dirs)
 
 def draw_paths_on_graph(graph, paths=None):
     if paths:
-        subgraph_nodes = set([node for path in paths for node in path])
+        subgraph_nodes = {node for path in paths for node in path}
         subgraph = graph.subgraph(subgraph_nodes)
     else:
         subgraph = graph
@@ -186,9 +185,10 @@ class Graph(BaseModel):
         condensed_definition_paths = condense_paths(definition_paths)
         condensed_references_paths = condense_paths(references_path)
 
-        res = ""
-        for path in condensed_definition_paths:
-            res += format_path(path, separator=" defined in ") + "\n"
+        res = "".join(
+            format_path(path, separator=" defined in ") + "\n"
+            for path in condensed_definition_paths
+        )
         for path in condensed_references_paths:
             res += format_path(path, separator=" used in ") + "\n"
         return res
@@ -217,16 +217,13 @@ class Graph(BaseModel):
 
         # Perform the topological sort
         sorted_nodes = list(nx.algorithms.dag.topological_sort(graph))
-        file_nodes = [node for node in sorted_nodes if node.endswith(".py")]
-        return file_nodes
+        return [node for node in sorted_nodes if node.endswith(".py")]
 
     def find_definitions(self, file_path: str):
-        definition_paths = extract_degree_paths(self.definitions_graph, file_path)
-        return definition_paths
+        return extract_degree_paths(self.definitions_graph, file_path)
 
     def find_references(self, file_path: str):
-        references_path = extract_degree_paths(self.references_graph, file_path)
-        return references_path
+        return extract_degree_paths(self.references_graph, file_path)
 
     def paths_to_first_degree_entities(self, file_paths: list[str]):
         file_paths = list(set(file_paths))

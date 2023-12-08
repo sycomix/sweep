@@ -153,10 +153,14 @@ UPDATE_SNIPPETS_MAX_TOKENS = 1450
 
 def get_last_import_line(code: str, max_: int = 150) -> int:
     lines = code.split("\n")
-    for i, line in enumerate(reversed(lines)):
-        if line.startswith("import ") or line.startswith("from "):
-            return min(len(lines) - i - 1, max_)
-    return -1
+    return next(
+        (
+            min(len(lines) - i - 1, max_)
+            for i, line in enumerate(reversed(lines))
+            if line.startswith("import ") or line.startswith("from ")
+        ),
+        -1,
+    )
 
 
 @dataclass
@@ -179,9 +183,7 @@ def strip_backticks(s: str) -> str:
     if s.endswith("```"):
         s = s[: s.rfind("\n")]
     s = s.strip("\n")
-    if s == '""':
-        return ""
-    return s
+    return "" if s == '""' else s
 
 
 def convert_comment_to_deletion(original, updated):
@@ -381,8 +383,7 @@ class ModifyBot:
             extraction_term_pattern, fetch_snippets_response, re.DOTALL
         ):
             for term in extraction_term.split("\n"):
-                term = term.strip()
-                if term:
+                if term := term.strip():
                     extraction_terms.append(term)
         snippet_queries = []
         snippets_query_pattern = r"<section_to_modify.*?(reason=\"(?P<reason>.*?)\")?>\n(?P<section>.*?)\n</section_to_modify>"
@@ -404,7 +405,7 @@ class ModifyBot:
                 SnippetToModify(reason=reason or "", snippet=snippet)
             )
 
-        if len(snippet_queries) == 0:
+        if not snippet_queries:
             raise UnneededEditError("No snippets found in file")
         return snippet_queries, extraction_terms, analysis_and_identifications_str
 
@@ -548,21 +549,10 @@ class ModifyBot:
             updated_pattern = r"<<<<<<<\s+(APPEND|REPLACE)\s+\(index=(?P<index>\d+)\)(.*?)\n(?P<original_code>.*?)=======(?P<updated_code>.*?)>>>>>>>"
             append_pattern = r"<<<<<<<\s+APPEND\s+\(index=(?P<index>\d+)\)(.*?)\n(?P<updated_code>.*?)>>>>>>>"
 
-            if (
-                len(
-                    list(
-                        re.finditer(
-                            updated_pattern, update_snippets_response, re.DOTALL
-                        )
-                    )
-                )
-                == 0
-                and len(
-                    list(
-                        re.finditer(append_pattern, update_snippets_response, re.DOTALL)
-                    )
-                )
-                == 0
+            if not list(
+                re.finditer(updated_pattern, update_snippets_response, re.DOTALL)
+            ) and not list(
+                re.finditer(append_pattern, update_snippets_response, re.DOTALL)
             ):
                 raise UnneededEditError("No snippets edited")
 

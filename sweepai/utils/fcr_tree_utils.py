@@ -17,12 +17,8 @@ def create_digraph(file_change_requests: list[FileChangeRequest]):
 
     ranks = {}
 
-    for i, fcr in enumerate(file_change_requests):
-        if fcr.parent is None:
-            ranks[fcr.id_] = 0
-        else:
-            ranks[fcr.id_] = ranks[fcr.parent.id_] + 1
-
+    for fcr in file_change_requests:
+        ranks[fcr.id_] = 0 if fcr.parent is None else ranks[fcr.parent.id_] + 1
     last_fcr = None
 
     for fcr in file_change_requests:
@@ -136,6 +132,6 @@ def create_digraph(file_change_requests: list[FileChangeRequest]):
 
 
 def create_digraph_svg(file_change_requests: list[FileChangeRequest]):
-    if len(file_change_requests) == 0:
+    if not file_change_requests:
         return ""
     return create_digraph(file_change_requests).pipe(format="svg").decode("utf-8")

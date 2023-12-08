@@ -19,9 +19,7 @@ GIT_CLONE = (
     "git clone https://{username}@github.com/{repo} " + REPO_PATH
 )
 GIT_BRANCH = f"cd {REPO_PATH}; " + "git checkout -B {branch}"
-IMAGE_INSTALLATION = {
-    "Nodejs": f"npm install",
-}
+IMAGE_INSTALLATION = {"Nodejs": "npm install"}
 PYTHON_CREATE_VENV = (
     f"cd {REPO_PATH} && python3 -m venv venv && source venv/bin/activate && poetry"
     " install"
@@ -88,10 +86,7 @@ class Sandbox(BaseModel):
 
     @classmethod
     def from_config(cls, path: str = "sweep.yaml"):
-        if os.path.exists(path):
-            return cls.from_yaml(open(path).read())
-        else:
-            return cls()
+        return cls.from_yaml(open(path).read()) if os.path.exists(path) else cls()
 
     @classmethod
     def from_directory(cls, path: str):
