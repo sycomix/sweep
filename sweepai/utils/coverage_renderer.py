@@ -44,7 +44,7 @@ def render_coverage_data(coverage_data, project_dir="."):
     for file_path, file_detail in coverage_data.files.items():
         if file_path == "total":
             continue
-        file_contents = open(project_dir + "/" + file_path).readlines()
+        file_contents = open(f"{project_dir}/{file_path}").readlines()
         mode = " "
         for i, line in enumerate(file_contents):
             if i + 1 in file_detail.missing_lines:

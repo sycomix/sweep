@@ -32,24 +32,24 @@ class DocQueryRewriter(ChatGPT):
 
 
 def extract_docs_links(content: str, user_dict: dict) -> list[str]:
-    urls = []
     logger.info(content)
     # add the user_dict to DOC_ENDPOINTS
     if not isinstance(user_dict, dict):
         return []
     for value in user_dict.values():
-        if not len(value) == 2:
+        if len(value) != 2:
             logger.error(f"{user_dict} user_dict values must be tuples of length 2")
             return []
     if user_dict:
         DOCS_ENDPOINTS.update(user_dict)
-    for framework, (url, _) in DOCS_ENDPOINTS.items():
+    return [
+        url
+        for framework, (url, _) in DOCS_ENDPOINTS.items()
         if (
             framework.lower() in content.lower()
             or framework.lower().replace(" ", "") in content.lower()
-        ):
-            urls.append(url)
-    return urls
+        )
+    ]
 
 
 class DocumentationSearcher(ChatGPT):

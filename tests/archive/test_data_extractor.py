@@ -30,11 +30,10 @@ def parse_html(html):
 
     title = soup.title.string
     content = soup.body.get_text()
-    links = []
-
-    for a in soup.find_all("a", href=True):
-        links.append({"title": a.text.strip(), "link": a["href"]})
-
+    links = [
+        {"title": a.text.strip(), "link": a["href"]}
+        for a in soup.find_all("a", href=True)
+    ]
     content = re.sub(r"[\n\r\t]+", "\n", content)
     content = re.sub(r" +", " ", content)
     content = re.sub(r"[\n ]{3,}", "\n\n", content)

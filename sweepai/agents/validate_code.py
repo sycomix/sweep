@@ -171,8 +171,7 @@ class ChangeValidator(ChatGPT):
                 request=self.file_change_request.instructions,
             )
         )
-        change_validation = ChangeValidation.from_string(change_validation_raw)
-        return change_validation
+        return ChangeValidation.from_string(change_validation_raw)
 
     def apply_validated_changes(self, change_validation: ChangeValidation):
         if change_validation.additional_changes_required:
@@ -185,8 +184,7 @@ class ChangeValidator(ChatGPT):
                     logger.warning(f"Invalid index: {idx}")
                     continue
                 del self.updated_snippets[idx]
-        new_code = self.create_new_file()
-        return new_code
+        return self.create_new_file()
 
 
 if __name__ == "__main__":

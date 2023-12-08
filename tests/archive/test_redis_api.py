@@ -57,10 +57,9 @@ def expensive_operation(name: str):
 def cached_operation(name: str):
     if redis_client.exists(name):
         return redis_client.get(name)
-    else:
-        result = expensive_operation(name)
-        redis_client.set(name, result)
-        return result
+    result = expensive_operation(name)
+    redis_client.set(name, result)
+    return result
 
 
 if __name__ == "__main__":

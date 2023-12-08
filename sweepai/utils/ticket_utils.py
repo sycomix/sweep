@@ -61,23 +61,24 @@ def prep_snippets(
     prefixes = []
     for snippet_path in snippet_paths:
         snippet_depth = len(snippet_path.split("/"))
-        for idx in range(snippet_depth):  # heuristic
-            if idx > snippet_depth // 2:
-                prefixes.append("/".join(snippet_path.split("/")[:idx]) + "/")
+        prefixes.extend(
+            "/".join(snippet_path.split("/")[:idx]) + "/"
+            for idx in range(snippet_depth)
+            if idx > snippet_depth // 2
+        )
         prefixes.append(snippet_path)
     included_files = [snippet.file_path for snippet in ranked_snippets]
     _, dir_obj = cloned_repo.list_directory_tree(
         included_directories=prefixes,
         included_files=included_files,
     )
-    repo_context_manager = RepoContextManager(
+    return RepoContextManager(
         dir_obj=dir_obj,
         current_top_tree=str(dir_obj),
         current_top_snippets=ranked_snippets,
         snippets=snippets,
         snippet_scores=content_to_lexical_score,
     )
-    return repo_context_manager
 
 
 def fetch_relevant_files(
@@ -100,8 +101,8 @@ def fetch_relevant_files(
     try:
         search_query = (title + summary + replies_text).strip("\n")
         replies_text = f"\n{replies_text}" if replies_text else ""
-        formatted_query = (f"{title.strip()}\n{summary.strip()}" + replies_text).strip(
-            "\n"
+        formatted_query = (
+            f"{title.strip()}\n{summary.strip()}{replies_text}".strip("\n")
         )
         repo_context_manager = prep_snippets(cloned_repo, search_query, ticket_progress)
         ticket_progress.search_progress.repo_tree = str(repo_context_manager.dir_obj)

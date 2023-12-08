@@ -25,7 +25,7 @@ class CustomIndex:
     def add_document(self, title, content, metadata={}):
         doc_id = title  # You can use title as doc_id or make it more unique
         self.metadata[doc_id] = metadata
-        self.index_document(doc_id, title + content)
+        self.index_document(doc_id, doc_id + content)
 
     def index_document(self, doc_id, content):
         tokens = [token.text for token in self.tokenizer(content)]
@@ -61,13 +61,10 @@ class CustomIndex:
 
         sorted_scores = sorted(scores.items(), key=lambda x: x[1], reverse=True)
 
-        # Attach metadata to the results
-        results_with_metadata = [
+        return [
             (doc_id, score, self.metadata.get(doc_id, {}))
             for doc_id, score in sorted_scores
         ]
-
-        return results_with_metadata
 
 word_pattern = re.compile(r"\b\w+\b")
 variable_pattern = re.compile(r"([A-Z][a-z]+|[a-z]+|[A-Z]+(?=[A-Z]|$))")
@@ -135,7 +132,7 @@ def construct_bigrams(tokens):
     for token in tokens:
         if prev_token:
             joined_token = Token(
-                text=prev_token.text + "_" + token.text,
+                text=f"{prev_token.text}_{token.text}",
                 pos=prev_token.pos,
                 startchar=prev_token.startchar,
                 end_pos=token.end_pos,
@@ -153,7 +150,7 @@ def construct_trigrams(tokens):
     for token in tokens:
         if prev_token and prev_prev_token:
             joined_token = Token(
-                text=prev_prev_token.text + "_" + prev_token.text + "_" + token.text,
+                text=f"{prev_prev_token.text}_{prev_token.text}_{token.text}",
                 pos=prev_prev_token.pos,
                 startchar=prev_prev_token.startchar,
                 end_pos=token.end_pos,
@@ -183,8 +180,7 @@ class CodeTokenizer(Tokenizer):
         trigrams = construct_trigrams(tokens)
         tokens.extend(bigrams)
         tokens.extend(trigrams)
-        for token in tokens:
-            yield token
+        yield from tokens
 
 
 @dataclass
@@ -198,17 +194,15 @@ class Document:
 def snippets_to_docs(snippets: list[Snippet], len_repo_cache_dir):
     from tqdm import tqdm
 
-    docs = []
-    for snippet in tqdm(snippets):
-        docs.append(
-            Document(
-                title=snippet.file_path[len_repo_cache_dir:],
-                content=snippet.get_snippet(add_ellipsis=False, add_lines=False),
-                start=snippet.start,
-                end=snippet.end,
-            )
+    return [
+        Document(
+            title=snippet.file_path[len_repo_cache_dir:],
+            content=snippet.get_snippet(add_ellipsis=False, add_lines=False),
+            start=snippet.start,
+            end=snippet.end,
         )
-    return docs
+        for snippet in tqdm(snippets)
+    ]
 
 
 def prepare_index_from_snippets(
@@ -250,7 +244,7 @@ class Documentation:
 
 def prepare_index_from_docs(docs):
     all_docs = [Documentation(url, content) for url, content in docs]
-    if len(all_docs) == 0:
+    if not all_docs:
         return None
     # Create the index based on the schema
     index = CustomIndex()
@@ -264,7 +258,7 @@ def prepare_index_from_docs(docs):
 
 def search_docs(query, index: CustomIndex):
     """Title, score, content"""
-    if index == None:
+    if index is None:
         return {}
     results_with_metadata = index.search_index(query)
     # Search the index
@@ -273,7 +267,7 @@ def search_docs(query, index: CustomIndex):
         if doc_id not in res:
             res[doc_id] = score
     # min max normalize scores from 0.5 to 1
-    if len(res) == 0:
+    if not res:
         max_score = 1
         min_score = 0
     else:
@@ -285,7 +279,7 @@ def search_docs(query, index: CustomIndex):
 
 def search_index(query, index: CustomIndex):
     """Title, score, content"""
-    if index == None:
+    if index is None:
         return {}
     try:
         # Create a query parser for the "content" field of the index
@@ -296,7 +290,7 @@ def search_index(query, index: CustomIndex):
             if doc_id not in res:
                 res[doc_id] = score
         # min max normalize scores from 0.5 to 1
-        if len(res) == 0:
+        if not res:
             max_score = 1
             min_score = 0
         else:

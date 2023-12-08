@@ -13,8 +13,6 @@ def diff_contains_dups_or_removals(diff, new_code):
     added_line_pattern = r"^\+.*"
 
     lines_removed = False
-    duplicate_lines_added = False
-
     # Split the diff and new_code into separate lines
     diff_lines = diff.split("\n")[3:]  # Start from the third line
     new_code_lines = [line.strip() for line in new_code.split("\n")]
@@ -28,11 +26,9 @@ def diff_contains_dups_or_removals(diff, new_code):
     added_lines = [
         line[1:].strip() for line in diff_lines if re.match(added_line_pattern, line)
     ]
-    for line in added_lines:
-        if new_code_lines.count(line) > 1:
-            duplicate_lines_added = True
-            break
-
+    duplicate_lines_added = any(
+        new_code_lines.count(line) > 1 for line in added_lines
+    )
     return lines_removed or duplicate_lines_added
 
 
@@ -46,9 +42,7 @@ def generate_diff(old_code, new_code):
         old_code.splitlines(keepends=True), new_code.splitlines(keepends=True)
     )
 
-    diff_text = "".join(diff)
-
-    return diff_text
+    return "".join(diff)
 
 
 def revert_whitespace_changes(original_file_str, modified_file_str):
@@ -59,17 +53,18 @@ def revert_whitespace_changes(original_file_str, modified_file_str):
 
     final_lines = []
     for opcode in diff.get_opcodes():
-        if opcode[0] == "equal" or opcode[0] == "replace":
+        if opcode[0] in ["equal", "replace"]:
             # If the lines are equal or replace (means the change is not whitespace only)
             # use original lines.
             final_lines.extend(original_lines[opcode[1] : opcode[2]])
         elif opcode[0] == "insert":
             # If the lines are inserted in the modified file, check if it's just whitespace changes
             # If it's just whitespace changes, ignore them.
-            for line in modified_lines[opcode[3] : opcode[4]]:
-                if line.strip() != "":
-                    final_lines.append(line)
-
+            final_lines.extend(
+                line
+                for line in modified_lines[opcode[3] : opcode[4]]
+                if line.strip() != ""
+            )
     return "\n".join(final_lines)
 
 
@@ -121,8 +116,6 @@ INCOMPLETE_MATCH = "INCOMPLETE_MATCH"
 
 
 def match_string(original, search, start_index=None, exact_match=False) -> Match:
-    pass
-
     best_match = find_best_match("\n".join(search), "\n".join(original))
     # else:
     #     best_match = Match(index, index + line_matches, score=100)
@@ -146,16 +139,11 @@ def get_snippet_with_padding(original, best_match, search):
     # Fix whitespace
     if search and len(search[0]) - len(search[0].lstrip()) == 0:
         num_whitespace = len(snippet[0]) - len(snippet[0].lstrip())
-        if num_whitespace > 0:
-            spaces = (
-                snippet[0][0] * num_whitespace
-            )  # Use first character (tab or space)
-        else:
-            spaces = ""
+        spaces = (snippet[0][0] * num_whitespace) if num_whitespace > 0 else ""
         strip = False
     else:  # Do diff between snippet and search
         # Check multiple lines for their whitespace
-        min_whitespace = min([len(s) - len(s.lstrip()) for s in search])
+        min_whitespace = min(len(s) - len(s.lstrip()) for s in search)
         # Rewrite min as for loop
         min_whitespace = None
         character = " "
@@ -201,7 +189,7 @@ def sliding_window_replacement(
         # Replace the line
         modified = [snippet[0].replace(search[0], replace[0])]
     elif strip:
-        first_line_spaces = min([len(s) - len(s.lstrip()) for s in search])
+        first_line_spaces = min(len(s) - len(s.lstrip()) for s in search)
         modified = [
             spaces
             + (lstrip_max(line, [" ", "\t"], first_line_spaces) if strip else line)
@@ -227,15 +215,15 @@ def get_all_diffs(modify_file_response: str) -> str:
     matches = re.findall(
         r"(<<<<.*?\n(.*?)\n====[^\n=]*\n(.*?)\n?>>>>)", modify_file_response, re.DOTALL
     )
-    result = "\n\n".join([_match for _match, *_ in matches])
-    return result
+    return "\n\n".join([_match for _match, *_ in matches])
 
 
 def get_matches(modify_file_response):
-    matches = re.findall(
-        r"<<<<.*?\n(.*?)\n====[^\n=]*\n(.*?)\n?>>>>", modify_file_response, re.DOTALL
+    return re.findall(
+        r"<<<<.*?\n(.*?)\n====[^\n=]*\n(.*?)\n?>>>>",
+        modify_file_response,
+        re.DOTALL,
     )
-    return matches
 
 
 def generate_new_file_from_patch(
@@ -244,8 +232,6 @@ def generate_new_file_from_patch(
     chunk_offset: int = 0,
     sweep_context: SweepContext = None,
 ):
-    old_file_lines = old_file_content.split("\n")
-
     # Extract content between <new_file> tags
     matches = get_matches(modify_file_response)
     errors = []
@@ -256,6 +242,7 @@ def generate_new_file_from_patch(
         search_and_replace, *_ = matches
         return search_and_replace[1]
 
+    old_file_lines = old_file_content.split("\n")
     for search, replace in matches:
         # Remove trailing tags
         if search.lstrip().startswith("<old_file>") and replace.lstrip().startswith(
@@ -288,19 +275,15 @@ def generate_new_file_from_patch(
             r = replace.replace("`", "\\`")
             errors.append(f"- {status}\n```\n{s}\n```\n\n```\n{r}\n```")
 
-    if len(errors) > 0:
+    if errors:
         log = "\n\n".join(errors)
         if sweep_context:
             discord_log_error(
-                f"{sweep_context.issue_url}\nModify Parsing Errors {'gpt3.5' if sweep_context.use_faster_model else 'gpt4'}: \n"
-                + log,
+                f"{sweep_context.issue_url}\nModify Parsing Errors {'gpt3.5' if sweep_context.use_faster_model else 'gpt4'}: \n{log}",
                 priority=2 if sweep_context.use_faster_model else 0,
             )
         else:
-            discord_log_error(
-                f"Modify Parsing Errors gpt3.5: \n" + log,
-                priority=2,
-            )
+            discord_log_error(f"Modify Parsing Errors gpt3.5: \n{log}", priority=2)
 
     result = "\n".join(old_file_lines)
     return result, errors

@@ -31,9 +31,7 @@ def unified_ctags_sorter(tags):
 def should_add_tag(tag):
     if tag["kind"] == "variable":
         return False
-    if "scope" not in tag and "signature" in tag and len(tag["signature"]) < 10:
-        return False
-    return True
+    return "scope" in tag or "signature" not in tag or len(tag["signature"]) >= 10
 
 
 def get_ctags_for_file(ctags: CTags, file_path: str):
@@ -56,7 +54,7 @@ def get_ctags_for_file(ctags: CTags, file_path: str):
     # Generate the string
     output = ""
     for kind, name, signature in tag_structure:
-        sig = " " + signature if signature else ""
+        sig = f" {signature}" if signature else ""
         output += f"  {kind} {name}{sig}\n"
     return output, names
 
@@ -79,6 +77,6 @@ def get_ctags_for_search(ctags: CTags, file_path: str, sort_tags=True):
     # Generate the string
     output = ""
     for kind, name, signature in tag_structure:
-        sig = " " + signature if signature else ""
+        sig = f" {signature}" if signature else ""
         output += f"{name}{sig}\n"
     return output, names

@@ -42,9 +42,7 @@ class InstallSetup:
         return self._name or self.install_script.split()[0]
 
     def is_used_in(self, file_list: list[str]):
-        return all(
-            [required_file in file_list for required_file in self.required_files]
-        )
+        return all(required_file in file_list for required_file in self.required_files)
 
     def get_lint_scripts(self, repo: str = "./repo"):
         scripts = []
@@ -86,10 +84,14 @@ INSTALL_SETUPS = [
 
 def detect_install_setup(root="repo"):
     files_in_root = os.listdir(root)
-    for install_setup in INSTALL_SETUPS:
-        if install_setup.is_used_in(files_in_root):
-            return install_setup
-    return None
+    return next(
+        (
+            install_setup
+            for install_setup in INSTALL_SETUPS
+            if install_setup.is_used_in(files_in_root)
+        ),
+        None,
+    )
 
 
 install_setup = detect_install_setup("test_repos/landing-page")
@@ -108,9 +110,10 @@ def run_sandbox(
     sb = stub.app.spawn_sandbox(
         "bash",
         "-c",
-        f"cd landing-page && (yarn run --prettier check . || (exit_code=$?; if [ $exit_code -eq 2 ]; then exit 2; fi; exit 0)) && yarn run lint && yarn run tsc",
+        "cd landing-page && (yarn run --prettier check . || (exit_code=$?; if [ $exit_code -eq 2 ]; then exit 2; fi; exit 0)) && yarn run lint && yarn run tsc",
         image=god_image.copy_local_file(
-            "test_repos/landing-page/package.json", "./landing-page/package.json"
+            "test_repos/landing-page/package.json",
+            "./landing-page/package.json",
         ).run_commands("cd landing-page && yarn install --ignore-engines"),
         mounts=[modal.Mount.from_local_dir("test_repos/landing-page")],
         timeout=timeout,
@@ -119,10 +122,9 @@ def run_sandbox(
     sb.wait()
     print(sb.returncode)
 
-    if sb.returncode != 0:
-        # raise Exception(sb.stdout.read() + "\n\n" + sb.stderr.read())
-        # print(sb.stdout.read())
-        print(sb.stderr.read())
-        print("Error!")
-    else:
+    if sb.returncode == 0:
         return sb.stdout.read()
+    # raise Exception(sb.stdout.read() + "\n\n" + sb.stderr.read())
+    # print(sb.stdout.read())
+    print(sb.stderr.read())
+    print("Error!")

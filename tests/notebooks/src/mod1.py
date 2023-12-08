@@ -1,5 +1,5 @@
 def pow(x, y):
     result = 1
-    for i in range(y):
+    for _ in range(y):
         result *= x
     return result

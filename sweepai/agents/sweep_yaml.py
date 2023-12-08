@@ -42,7 +42,7 @@ sweep_yaml_user_prompt = """\
 
 class SweepYamlBot(ChatGPT):
     def get_sweep_yaml_rules(self, commit_history: str):
-        if len(commit_history) == 0:
+        if not commit_history:
             return ""
         self.messages = [
             Message(
@@ -81,6 +81,4 @@ class SweepYamlBot(ChatGPT):
         pattern = r"<rule>\s*(.*?)\s*</rule>"
         rules = re.findall(pattern, response, re.DOTALL)
         logger.info(f"Successfully added {len(rules)} additional rules.")
-        if rules:
-            return '  - "' + '"\n  - "'.join(rules) + '"'
-        return ""
+        return '  - "' + '"\n  - "'.join(rules) + '"' if rules else ""

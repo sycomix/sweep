@@ -17,9 +17,6 @@ from sweepai.config.server import (
 )
 from sweepai.logn.cache import file_cache
 
-if BASERUN_API_KEY is not None:
-    pass
-
 OPENAI_TIMEOUT = 60  # one minute
 
 OPENAI_EXCLUSIVE_MODELS = [
@@ -133,20 +130,19 @@ class OpenAIProxy:
             azure_endpoint=base_url,
             api_version=OPENAI_API_VERSION,
         )
-        response = client.chat.completions.create(
+        return client.chat.completions.create(
             model=model,
             messages=messages,
             max_tokens=max_tokens,
             temperature=temperature,
             timeout=OPENAI_TIMEOUT,
         )
-        return response
 
     def set_openai_default_api_parameters(
         self, model, messages, max_tokens, temperature
     ):
         client = OpenAI(api_key=OPENAI_API_KEY)
-        response = client.chat.completions.create(
+        return client.chat.completions.create(
             model=model,
             messages=messages,
             max_tokens=max_tokens,
@@ -154,4 +150,3 @@ class OpenAIProxy:
             timeout=OPENAI_TIMEOUT,
             seed=SEED,
         )
-        return response

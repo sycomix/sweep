@@ -18,7 +18,7 @@ from tqdm import tqdm
 
 class SandboxContainer:
     def __init__(self, *args, **kwargs):
-        self.container_name = "sandbox-{}".format(str(uuid.uuid4()))
+        self.container_name = f"sandbox-{str(uuid.uuid4())}"
 
     def __enter__(self):
         client.containers.run(
@@ -49,10 +49,7 @@ class Sandbox(BaseModel):
 
     @classmethod
     def from_config(cls, path: str = "sweep.yaml"):
-        if os.path.exists(path):
-            return cls.from_yaml(open(path).read())
-        else:
-            return cls()
+        return cls.from_yaml(open(path).read()) if os.path.exists(path) else cls()
 
 
 app = typer.Typer(name="sweep-sandbox")
@@ -98,11 +95,10 @@ def copy_to(container):
 
 
 def get_sandbox_from_config():
-    if os.path.exists("sweep.yaml"):
-        config = yaml.load(open("sweep.yaml", "r"), Loader=yaml.FullLoader)
-        return Sandbox(**config.get("sandbox", {}))
-    else:
+    if not os.path.exists("sweep.yaml"):
         return Sandbox()
+    config = yaml.load(open("sweep.yaml", "r"), Loader=yaml.FullLoader)
+    return Sandbox(**config.get("sandbox", {}))
 
 
 @app.command()
@@ -151,13 +147,11 @@ def sandbox(file_path: Optional[Path] = None, telemetry: bool = True):
     print(f"\n Spinning up sandbox container \n", style="bold white on cyan")
     with SandboxContainer() as container:
         try:
-            print(f"[bold]Copying files into sandbox[/bold]")
+            print("[bold]Copying files into sandbox[/bold]")
             copy_to(container)
 
             def wrap_command(command):
-                command = shlex.quote(
-                    "cd repo && " + command.format(file_path=file_path)
-                )
+                command = shlex.quote(f"cd repo && {command.format(file_path=file_path)}")
                 return f"bash -c {command}"
 
             def summarize_logs(logs):
@@ -178,7 +172,9 @@ def sandbox(file_path: Optional[Path] = None, telemetry: bool = True):
                 output = output.decode("utf-8")
                 if output:
                     print(summarize_logs(output))
-                if exit_code != 0 and not ("prettier" in command and exit_code == 2):
+                if exit_code != 0 and (
+                    "prettier" not in command or exit_code != 2
+                ):
                     raise Exception(output)
                 return output
 

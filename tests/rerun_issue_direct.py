@@ -28,7 +28,7 @@ def fetch_issue_request(issue_url: str, __version__: str = "0"):
     print("Fetching repo...")
     issue = g.get_repo(f"{org_name}/{repo_name}").get_issue(int(issue_number))
 
-    issue_request = IssueRequest(
+    return IssueRequest(
         action="labeled",
         issue=IssueRequest.Issue(
             title=issue.title,
@@ -66,8 +66,6 @@ def fetch_issue_request(issue_url: str, __version__: str = "0"):
         ),
     )
 
-    return issue_request
-
 
 def send_request(issue_request):
     with TestClient(app) as client:
@@ -83,9 +81,9 @@ def test_issue_url(
     debug: bool = True,
 ):
     issue_url = issue_url or typer.prompt("Issue URL")
-    print(f"Fetching issue metadata...")
+    print("Fetching issue metadata...")
     issue_request = fetch_issue_request(issue_url)
-    print(f"Sending request...")
+    print("Sending request...")
 
     if debug:
         client = TestClient(app)

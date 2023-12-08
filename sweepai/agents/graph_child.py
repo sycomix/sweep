@@ -108,19 +108,16 @@ class GraphContextAndPlan(RegexMatchableBaseModel):
             end = int(end) - 1
             end = min(end, start + 200)
             if end - start < 20:  # don't allow small snippets
-                start = start - 10
+                start -= 10
                 end = start + 10
             snippet = Snippet(file_path=file_path, start=start, end=end, content="")
             relevant_new_snippet.append(snippet)
-        plan_match = re.search(plan_pattern, string, re.DOTALL)
-        if plan_match:
+        if plan_match := re.search(plan_pattern, string, re.DOTALL):
             code_change_description = plan_match.group(
                 "code_change_description"
             ).strip()
             if code_change_description.endswith(NO_MODS_KWD):
-                logger.warning(
-                    "NO_MODS_KWD found in code_change_description for " + file_path
-                )
+                logger.warning(f"NO_MODS_KWD found in code_change_description for {file_path}")
                 code_change_description = None
         return cls(
             relevant_new_snippet=relevant_new_snippet,
@@ -166,10 +163,7 @@ class GraphChildBot(ChatGPT):
 
 
 def extract_int(s):
-    match = re.search(r"\d+", s)
-    if match:
-        return int(match.group())
-    return None
+    return int(match.group()) if (match := re.search(r"\d+", s)) else None
 
 
 def extract_python_span(code: str, entities: str):

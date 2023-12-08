@@ -150,27 +150,26 @@ def new_planning(
             fcr_matches = list(
                 re.finditer(FileChangeRequest._regex, final_message, re.DOTALL)
             )
-            if len(fcr_matches) > 0:
+            if fcr_matches:
                 break
-            else:
-                client.beta.threads.messages.create(
-                    thread_id=thread_id,
-                    role="user",
-                    content="A valid plan (within the <plan> tags) was not provided. Please continue working on the plan. If you are stuck, consider starting over.",
-                )
-                run = client.beta.threads.runs.create(
-                    thread_id=response.thread_id,
-                    assistant_id=response.assistant_id,
-                    instructions=system_message.format(
-                        user_request=request, file_path=f"mnt/data/{zip_file_id}"
-                    ),
-                )
-                run_id = run.id
-                messages = run_until_complete(
-                    thread_id=thread_id,
-                    run_id=run_id,
-                    assistant_id=response.assistant_id,
-                )
+            client.beta.threads.messages.create(
+                thread_id=thread_id,
+                role="user",
+                content="A valid plan (within the <plan> tags) was not provided. Please continue working on the plan. If you are stuck, consider starting over.",
+            )
+            run = client.beta.threads.runs.create(
+                thread_id=response.thread_id,
+                assistant_id=response.assistant_id,
+                instructions=system_message.format(
+                    user_request=request, file_path=f"mnt/data/{zip_file_id}"
+                ),
+            )
+            run_id = run.id
+            messages = run_until_complete(
+                thread_id=thread_id,
+                run_id=run_id,
+                assistant_id=response.assistant_id,
+            )
         for match_ in fcr_matches:
             group_dict = match_.groupdict()
             if group_dict["change_type"] == "create_file":
@@ -182,7 +181,7 @@ def new_planning(
             fcr.instructions = fcr.instructions.replace("\n*", "\n•")
             fcr.instructions = fcr.instructions.strip("\n")
             if fcr.instructions.startswith("*"):
-                fcr.instructions = "•" + fcr.instructions[1:]
+                fcr.instructions = f"•{fcr.instructions[1:]}"
             fcrs.append(fcr)
             new_file_change_request = copy.deepcopy(fcr)
             new_file_change_request.change_type = "check"

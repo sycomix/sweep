@@ -32,7 +32,7 @@ class HumanMessagePrompt(BaseModel):
         for snippet in self.snippets:
             if snippet.file_path not in deduped_paths:
                 deduped_paths.append(snippet.file_path)
-        if len(deduped_paths) == 0:
+        if not deduped_paths:
             return ""
         start_directory_tag = (
             "<relevant_paths_in_repo>" if not directory_tag else f"<{directory_tag}>"
@@ -50,21 +50,6 @@ class HumanMessagePrompt(BaseModel):
 
     def get_commit_history(self, commit_tag=None):
         return ""
-        if len(self.commit_history) == 0:
-            return ""
-        start_commit_tag = (
-            "<relevant_commit_history>" if not commit_tag else f"<{commit_tag}>"
-        )
-        end_commit_tag = (
-            "</relevant_commit_history>" if not commit_tag else f"</{commit_tag}>"
-        )
-        return (
-            start_commit_tag
-            + "\n"
-            + "\n".join(self.commit_history)
-            + "\n"
-            + end_commit_tag
-        )
 
     def get_file_paths(self):
         return [snippet.file_path for snippet in self.snippets]
@@ -78,7 +63,7 @@ class HumanMessagePrompt(BaseModel):
         end_snippet_tag = (
             "</relevant_snippets_in_repo>" if not snippet_tag else f"</{snippet_tag}>"
         )
-        if joined_snippets.strip() == "":
+        if not joined_snippets.strip():
             return ""
         return start_snippet_tag + "\n" + joined_snippets + "\n" + end_snippet_tag
 
@@ -97,7 +82,7 @@ class HumanMessagePrompt(BaseModel):
             else ""
         )
         relevant_commit_history = self.get_commit_history(commit_tag)
-        human_messages = [
+        return [
             {
                 "role": msg["role"],
                 "content": msg["content"].format(
@@ -116,7 +101,6 @@ class HumanMessagePrompt(BaseModel):
             }
             for msg in human_message_prompt
         ]
-        return human_messages
 
     def get_issue_metadata(self):
         self.summary = (
@@ -158,7 +142,7 @@ class HumanMessagePromptReview(HumanMessagePrompt):
         return "\n".join(formatted_diffs)
 
     def construct_prompt(self):
-        human_messages = [
+        return [
             {
                 "role": msg["role"],
                 "content": msg["content"].format(
@@ -179,8 +163,6 @@ class HumanMessagePromptReview(HumanMessagePrompt):
             for msg in human_message_review_prompt
         ]
 
-        return human_messages
-
 
 class HumanMessageCommentPrompt(HumanMessagePrompt):
     comment: str
@@ -200,7 +182,7 @@ class HumanMessageCommentPrompt(HumanMessagePrompt):
         return "\n".join(formatted_diffs)
 
     def construct_prompt(self):
-        human_messages = [
+        return [
             {
                 "role": msg["role"],
                 "content": msg["content"].format(
@@ -227,7 +209,6 @@ class HumanMessageCommentPrompt(HumanMessagePrompt):
             }
             for msg in human_message_prompt_comment
         ]
-        return human_messages
 
     def get_issue_metadata(self):
         self.summary = (
@@ -246,7 +227,6 @@ class HumanMessageFinalPRComment(BaseModel):
     summarization_replies: list
 
     def construct_prompt(self):
-        final_review = final_review_prompt.format(
+        return final_review_prompt.format(
             file_summaries="\n".join(self.summarization_replies)
         )
-        return final_review

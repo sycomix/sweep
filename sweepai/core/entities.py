@@ -103,7 +103,7 @@ class ExpandedPlan(RegexMatchableBaseModel):
 # todo (fix double colon regex): Update the split from "file_tree.py : desc" to "file_tree.py\tdesc"
 # tab supremacy
 def clean_filename(file_name: str):
-    valid_chars = "-_./$[]%s%s" % (string.ascii_letters, string.digits)
+    valid_chars = f"-_./$[]{string.ascii_letters}{string.digits}"
     file_name = "".join(c for c in file_name if c in valid_chars)
     file_name = file_name.replace(" ", "")
     file_name = file_name.strip("`")
@@ -196,7 +196,7 @@ class FileChangeRequest(RegexMatchableBaseModel):
             if " " in result.source_file:
                 result.source_file = result.source_file.split(" ")[0]
         if result.instructions.startswith("*"):
-            result.instructions = "•" + result.instructions[1:]
+            result.instructions = f"•{result.instructions[1:]}"
         if result.start_line:
             result.start_line = int(result.start_line)
         if result.end_line:
@@ -226,9 +226,7 @@ class FileChangeRequest(RegexMatchableBaseModel):
         if self.status == "succeeded":
             return "✓"
         elif self.status == "failed":
-            if self.change_type == "modify":
-                return "! No changes made"
-            return "✗"
+            return "! No changes made" if self.change_type == "modify" else "✗"
         elif self.status == "queued":
             return "▶"
         elif self.status == "running":
@@ -248,8 +246,8 @@ class FileChangeRequest(RegexMatchableBaseModel):
             self.status
         ] + " "
         if self.change_type == "check":
-            return prefix + f"Run GitHub Actions for `{self.filename}`"
-        return prefix + f"{self.change_type.capitalize()}\n{self.filename}"
+            return f"{prefix}Run GitHub Actions for `{self.filename}`"
+        return f"{prefix}{self.change_type.capitalize()}\n{self.filename}"
 
     @property
     def color(self):
@@ -263,10 +261,7 @@ class FileChangeRequest(RegexMatchableBaseModel):
 
     @property
     def entity_display_without_backtick(self):
-        if self.entity:
-            return f"{self.filename}:{self.entity}"
-        else:
-            return f"{self.filename}"
+        return f"{self.filename}:{self.entity}" if self.entity else f"{self.filename}"
 
     @property
     def instructions_ticket_display(self):
@@ -285,8 +280,7 @@ class FileChangeRequest(RegexMatchableBaseModel):
                 self.old_content.splitlines(keepends=True),
                 self.new_content.splitlines(keepends=True),
             )
-            diff_text = "".join(diff)
-            return diff_text
+            return "".join(diff)
         return ""
 
 
@@ -389,7 +383,7 @@ class Snippet(BaseModel):
             if self.start > 1:
                 snippet = "...\n" + snippet
             if self.end < self.content.count("\n") + 1:
-                snippet = snippet + "\n..."
+                snippet += "\n..."
         return snippet
 
     def __add__(self, other):
@@ -433,12 +427,12 @@ class Snippet(BaseModel):
 
     def get_markdown_link(self, repo_name: str, commit_id: str = "main"):
         num_lines = self.content.count("\n") + 1
-        base = commit_id + "/" if commit_id != "main" else ""
+        base = f"{commit_id}/" if commit_id != "main" else ""
         return f"[{base}{self.file_path}#L{max(self.start, 1)}-L{min(self.end, num_lines)}]({self.get_url(repo_name, commit_id)})"
 
     def get_slack_link(self, repo_name: str, commit_id: str = "main"):
         num_lines = self.content.count("\n") + 1
-        base = commit_id + "/" if commit_id != "main" else ""
+        base = f"{commit_id}/" if commit_id != "main" else ""
         return f"<{self.get_url(repo_name, commit_id)}|{base}{self.file_path}#L{max(self.start, 1)}-L{min(self.end, num_lines)}>"
 
     def get_preview(self, max_lines: int = 5):
@@ -450,7 +444,7 @@ class Snippet(BaseModel):
         if self.start > 1:
             snippet = "\n" + snippet
         if self.end < self.content.count("\n") + 1 and self.end > max_lines:
-            snippet = snippet + "\n"
+            snippet += "\n"
         return snippet
 
     def expand(self, num_lines: int = 25):

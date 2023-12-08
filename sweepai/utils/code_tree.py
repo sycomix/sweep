@@ -61,10 +61,7 @@ class CodeTree(BaseModel):
                 < min(max_line - min_line + threshold, max_num_lines)
             ):
                 valid_span = (start_line, end_line)
-        if valid_span is not None:
-            return valid_span
-        else:
-            return (min_line, max_line)
+        return valid_span if valid_span is not None else (min_line, max_line)
 
 
 def get_global_function_names_and_spans(node):

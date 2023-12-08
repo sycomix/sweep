@@ -86,54 +86,52 @@ class JediParsing:
             inference = script.infer(line=line, column=column)
             if len(data) == 0:
                 return None
-            else:
-                is_external_import = False
-                # If the module is native to python its not present in
-                # site-packages but rather in the python/ folder
-                # so we are gating against all things python for now
-                # if one of our clients has a problem we fix it later
-                for inference_bits in inference:
-                    try:
-                        inference_type = importlib.util.find_spec(
-                            inference_bits.module_name
-                        )
-                        if inference_type is not None:
-                            is_external_import = True
-                    except Exception:
-                        continue
-                if data[0].module_path is not None and (
-                    "site-packages" in str(data[0].module_path)
-                    or "python" in str(data[0].module_path)
-                ):
-                    is_external_import = True
-                goto_definition_type = JediFullReturnType(
-                    fully_qualified_type=data[0].full_name,
-                    attribute_type=data[0].type,
-                    is_external_library_import=is_external_import,
-                    module_path=str(data[0].module_path),
-                )
+            is_external_import = False
+            # If the module is native to python its not present in
+            # site-packages but rather in the python/ folder
+            # so we are gating against all things python for now
+            # if one of our clients has a problem we fix it later
+            for inference_bits in inference:
+                try:
+                    inference_type = importlib.util.find_spec(
+                        inference_bits.module_name
+                    )
+                    if inference_type is not None:
+                        is_external_import = True
+                except Exception:
+                    continue
+            if data[0].module_path is not None and (
+                "site-packages" in str(data[0].module_path)
+                or "python" in str(data[0].module_path)
+            ):
+                is_external_import = True
+            goto_definition_type = JediFullReturnType(
+                fully_qualified_type=data[0].full_name,
+                attribute_type=data[0].type,
+                is_external_library_import=is_external_import,
+                module_path=str(data[0].module_path),
+            )
                 # If this is a class we are looking at, lets try to infer the
                 # type instead of doing goto def because import styles can
                 # give us a wrong idea about what the codelocation is
-                if data[0].type == "class":
-                    inference_list = script.infer(line=line, column=column)
-                    if len(inference_list) == 0:
-                        return goto_definition_type
-                    else:
-                        for inference in inference_list:
-                            if (
-                                inference.type == "class"
-                                and inference.full_name is not None
-                            ):
-                                return JediFullReturnType(
-                                    fully_qualified_type=inference.full_name,
-                                    attribute_type="class",
-                                    is_external_library_import=is_external_import,
-                                    module_path=str(inference.module_path)
-                                    if inference.module_path is not None
-                                    else full_file_path,
-                                )
-                return goto_definition_type
+            if data[0].type == "class":
+                inference_list = script.infer(line=line, column=column)
+                if len(inference_list) == 0:
+                    return goto_definition_type
+                for inference in inference_list:
+                    if (
+                        inference.type == "class"
+                        and inference.full_name is not None
+                    ):
+                        return JediFullReturnType(
+                            fully_qualified_type=inference.full_name,
+                            attribute_type="class",
+                            is_external_library_import=is_external_import,
+                            module_path=str(inference.module_path)
+                            if inference.module_path is not None
+                            else full_file_path,
+                        )
+            return goto_definition_type
         except Exception:
             return None
 
@@ -157,10 +155,7 @@ class JediParsing:
         script = jedi.Script(code, project=self.jedi_project)
         try:
             data = script.goto(line=line, column=column)
-            if len(data) == 0:
-                return None
-            else:
-                return data[0].full_name
+            return None if len(data) == 0 else data[0].full_name
         except Exception:
             # print("JEDI Exception", str(e), full_file_path, line, column)
             return None

@@ -45,7 +45,7 @@ def fetch_issue_request(issue_url: str, __version__: str = "0"):
     print("Fetching repo...")
     issue = g.get_repo(f"{org_name}/{repo_name}").get_issue(int(issue_number))
 
-    issue_request = IssueRequest(
+    return IssueRequest(
         action="labeled",
         issue=IssueRequest.Issue(
             title=issue.title,
@@ -83,8 +83,6 @@ def fetch_issue_request(issue_url: str, __version__: str = "0"):
         ),
     )
 
-    return issue_request
-
 
 def main(
     issue_url: str,
@@ -92,10 +90,10 @@ def main(
     better_stack_prefix: str = "https://logs.betterstack.com/team/199101/tail?rf=now-30m&q=metadata.issue_url%3A",
 ):
     issue_url = issue_url or typer.prompt("Issue URL")
-    print(f"Fetching issue metdata...")
+    print("Fetching issue metdata...")
     issue_request = fetch_issue_request(issue_url)
     wait_for_server(host)
-    print(f"Sending request...")
+    print("Sending request...")
     response = requests.post(
         host,
         json=issue_request.dict(),

@@ -49,8 +49,9 @@ class NameBot(ChatGPT):
         name_pattern = r"<function_name>\n(.*?)\n</function_name>"
         name_matches = list(re.finditer(name_pattern, name_response, re.DOTALL))
         name_matches = [match.group(1) for match in name_matches]
-        function_names = [
-            serialize_method_name(name_match.strip().strip('"').strip("'").strip("`"))
+        return [
+            serialize_method_name(
+                name_match.strip().strip('"').strip("'").strip("`")
+            )
             for name_match in name_matches
         ]
-        return function_names

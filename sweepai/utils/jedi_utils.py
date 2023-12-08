@@ -135,7 +135,6 @@ def get_references_from_defined_function(
     sub_function_definitions = collect_function_definitions(
         script=script, tree=tree, min_line=start_line, max_line=end_line
     )
-    indices_and_code = []
     filtered_definitions = []
     package_prefix = script.get_context().module_name.split(".")[0]
     for sub_fn_def in sub_function_definitions:
@@ -150,15 +149,16 @@ def get_references_from_defined_function(
         if sub_fn_def.full_name == fn_def.full_name:
             continue
         filtered_definitions.append(sub_fn_def)
-    for sub_fn_def in filtered_definitions:
-        indices_and_code.append(get_function_references(sub_fn_def, file_full_path))
-    fn_and_ref = FunctionAndReferences(
+    indices_and_code = [
+        get_function_references(sub_fn_def, file_full_path)
+        for sub_fn_def in filtered_definitions
+    ]
+    return FunctionAndReferences(
         function_name=fn_def.full_name,
         function_code=function_code,
         function_definition=fn_def,
         indices_and_references=indices_and_code,
     )
-    return fn_and_ref
 
 
 def get_parent_class_reference(name: Name, script: jedi.Script):

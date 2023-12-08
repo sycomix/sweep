@@ -131,10 +131,10 @@ def on_comment(
             else ChatLogger(
                 {
                     "repo_name": repo_name,
-                    "title": "(Comment) " + pr_title,
+                    "title": f"(Comment) {pr_title}",
                     "issue_url": pr.html_url,
-                    "pr_file_path": pr_file_path,  # may be None
-                    "pr_chunk": pr_chunk,  # may be None
+                    "pr_file_path": pr_file_path,
+                    "pr_chunk": pr_chunk,
                     "repo_full_name": repo_full_name,
                     "repo_description": repo_description,
                     "comment": comment,
@@ -412,12 +412,10 @@ def on_comment(
         sweep_bot.comment_pr_diff_str = pr_diff_string
         sweep_bot.comment_pr_files_modified = pr_files_modified
         changes_made = sum(
-            [
-                change_made
-                for _, change_made, _, _, _ in sweep_bot.change_files_in_github_iterator(
-                    file_change_requests, branch_name, blocked_dirs
-                )
-            ]
+            change_made
+            for _, change_made, _, _, _ in sweep_bot.change_files_in_github_iterator(
+                file_change_requests, branch_name, blocked_dirs
+            )
         )
         try:
             if comment_id:

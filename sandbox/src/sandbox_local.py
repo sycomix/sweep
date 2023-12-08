@@ -77,8 +77,7 @@ def discord_log_error(content, priority=0):
     """
     priority: 0 (high), 1 (medium), 2 (low)
     """
-    DISCORD_WEBHOOK_URL = None
-    if DISCORD_WEBHOOK_URL:
+    if DISCORD_WEBHOOK_URL := None:
         try:
             data = {"content": content}
             headers = {"Content-Type": "application/json"}
@@ -262,7 +261,7 @@ async def run_sandbox(request: SandboxRequest):
 
             def wrap_command(command):
                 command = shlex.quote(
-                    "cd repo && " + command.format(file_path=request.file_path)
+                    f"cd repo && {command.format(file_path=request.file_path)}"
                 )
                 return f"bash -c {command}"
 
@@ -277,11 +276,11 @@ async def run_sandbox(request: SandboxRequest):
                 return logs
 
             def run_command(
-                command: str,
-                stage: str = "check",
-                iteration: int = 0,
-                save_execution: bool = True,
-            ):
+                            command: str,
+                            stage: str = "check",
+                            iteration: int = 0,
+                            save_execution: bool = True,
+                        ):
                 print(f"\n\n### Running {command} ###\n")
                 exit_code, output = container.exec_run(
                     wrap_command(command), stderr=True
@@ -298,7 +297,9 @@ async def run_sandbox(request: SandboxRequest):
                             iteration=iteration,
                         )
                     )
-                if exit_code != 0 and not ("prettier" in command and exit_code == 1):
+                if exit_code != 0 and (
+                    "prettier" not in command or exit_code != 1
+                ):
                     error_messages.append(output)
                     raise SandboxError(output)
                 return output
@@ -342,7 +343,7 @@ async def run_sandbox(request: SandboxRequest):
                 print("Length of content:", len(request.content))
                 request.content
                 try:
-                    print(f"Trying to lint")
+                    print("Trying to lint")
                     for command in sandbox.check:
                         run_command(command, stage="check")
                     success = True
